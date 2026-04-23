@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS } from '../utils/constants'
+import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS, SERVICE_TYPES } from '../utils/constants'
 
 const initialFormData = {
   client: {
@@ -11,9 +11,11 @@ const initialFormData = {
     evaluationDate: new Date().toISOString().split('T')[0]
   },
   equipment: {
-    modelId: 'ba3pro',
+    modelId: 'va3pro',
     customPrice: null
   },
+  calculationType: 'product',
+  serviceType: null,
   operational: {
     totalAssets: null,
     criticalAssets: null,
@@ -81,6 +83,21 @@ export function useFormData() {
     }))
   }, [])
 
+  const updateCalculationType = useCallback((type) => {
+    setFormData(prev => ({
+      ...prev,
+      calculationType: type,
+      serviceType: type === 'service' ? prev.serviceType || 'rotodinamico' : null
+    }))
+  }, [])
+
+  const updateServiceType = useCallback((serviceType) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceType
+    }))
+  }, [])
+
   const nextStep = useCallback(() => {
     setCurrentStep(prev => Math.min(prev + 1, 4))
   }, [])
@@ -127,6 +144,8 @@ export function useFormData() {
     updateBenchmarks,
     updateFinancial,
     updateCustomWeights,
+    updateCalculationType,
+    updateServiceType,
     nextStep,
     prevStep,
     goToStep,

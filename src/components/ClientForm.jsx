@@ -9,7 +9,7 @@ export default function ClientForm({ data, onChange }) {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
         <InputField
-          label="Nombre de la Empresa *"
+          label="Nombre de la Empresa"
           value={data.companyName}
           onChange={(value) => onChange('companyName', value)}
           placeholder="Ej: EPM, Celsia, Postobón"
@@ -17,7 +17,7 @@ export default function ClientForm({ data, onChange }) {
         
         <div className="mb-4">
           <label className="block text-navy-700 text-sm font-medium mb-1">
-            Sector Industrial *
+            Sector Industrial
           </label>
           <select
             value={data.sector}

@@ -17,10 +17,20 @@ export const COLORS = {
   white: '#FFFFFF'
 }
 
+export const PRODUCT_LINE = {
+  name: 'Colectores de Vibración',
+  description: 'Sistemas de monitoreo y análisis de vibraciones para equipos rotativos'
+}
+
 export const EQUIPMENT_MODELS = [
-  { id: 'vidrio', name: 'Vidrio', level: 'Básico', price: 21000000, features: 'Colector básico para rutas de inspección estándar' },
-  { id: 'ba3pro', name: 'Ba 3 Pro', level: 'Intermedio', price: 68000000, features: 'Colector profesional con análisis avanzado' },
-  { id: 'ba5', name: 'Ba 5', level: 'Full / Avanzado', price: 115000000, features: 'Sistema completo de monitoreo y análisis' }
+  { id: 'vibriom', name: 'VibrioM', level: 'Básico', price: 21000000, features: 'Colector básico para rutas de inspección estándar' },
+  { id: 'va3pro', name: 'VA3pro', level: 'Intermedio', price: 68000000, features: 'Colector profesional con análisis avanzado' },
+  { id: 'va5pro', name: 'VA5pro', level: 'Full / Avanzado', price: 115000000, features: 'Sistema completo de monitoreo y análisis' }
+]
+
+export const SERVICE_TYPES = [
+  { id: 'rotodinamico', name: 'Rotodinámico', description: 'Servicio de diagnóstico y análisis de equipos rotativos' },
+  { id: 'contrato_marco', name: 'Contrato Marco', description: 'Contrato marco de servicios por un año' }
 ]
 
 export const DEFAULT_BENCHMARKS = {

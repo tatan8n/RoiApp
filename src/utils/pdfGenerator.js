@@ -37,36 +37,38 @@ export async function generatePDF(data, results) {
 
   let yPos = 50
 
-  pdf.setTextColor(0, 43, 92)
-  pdf.setFontSize(12)
-  pdf.setFont('helvetica', 'bold')
-  pdf.text('INFORMACIÓN DEL CLIENTE', margin, yPos)
-  yPos += 8
-
-  pdf.setDrawColor(0, 43, 92)
-  pdf.setLineWidth(0.5)
-  pdf.line(margin, yPos, pageWidth - margin, yPos)
-  yPos += 6
-
-  pdf.setTextColor(60, 60, 60)
-  pdf.setFontSize(10)
-  pdf.setFont('helvetica', 'normal')
-
-  const clientInfo = [
-    ['Empresa:', data.client?.companyName || 'No especificado'],
-    ['Sector:', data.client?.sector || 'No especificado'],
-    ['Contacto:', data.client?.contactName || 'No especificado'],
-    ['Fecha:', data.client?.evaluationDate || new Date().toLocaleDateString('es-CO')]
-  ]
-
-  clientInfo.forEach(([label, value], idx) => {
+  if (data.client?.companyName) {
+    pdf.setTextColor(0, 43, 92)
+    pdf.setFontSize(12)
     pdf.setFont('helvetica', 'bold')
-    pdf.text(label, margin + (idx % 2) * 80, yPos + Math.floor(idx / 2) * 6)
-    pdf.setFont('helvetica', 'normal')
-    pdf.text(value, margin + 25 + (idx % 2) * 80, yPos + Math.floor(idx / 2) * 6)
-  })
+    pdf.text('INFORMACIÓN DEL CLIENTE', margin, yPos)
+    yPos += 8
 
-  yPos += 20
+    pdf.setDrawColor(0, 43, 92)
+    pdf.setLineWidth(0.5)
+    pdf.line(margin, yPos, pageWidth - margin, yPos)
+    yPos += 6
+
+    pdf.setTextColor(60, 60, 60)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+
+    const clientInfo = [
+      ['Empresa:', data.client?.companyName || 'No especificado'],
+      ['Sector:', data.client?.sector || 'No especificado'],
+      ['Contacto:', data.client?.contactName || 'No especificado'],
+      ['Fecha:', data.client?.evaluationDate || new Date().toLocaleDateString('es-CO')]
+    ]
+
+    clientInfo.forEach(([label, value], idx) => {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(label, margin + (idx % 2) * 80, yPos + Math.floor(idx / 2) * 6)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(value, margin + 25 + (idx % 2) * 80, yPos + Math.floor(idx / 2) * 6)
+    })
+
+    yPos += 20
+  }
 
   pdf.setFillColor(0, 87, 155)
   pdf.roundedRect(margin, yPos, contentWidth, 45, 3, 3, 'F')
