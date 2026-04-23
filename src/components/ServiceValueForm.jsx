@@ -1,61 +1,8 @@
-import React, { useState, useCallback } from 'react'
-
-function formatWithSeparators(value) {
-  if (value === null || value === undefined || value === '') return ''
-  const parts = value.toString().split('.')
-  const integerPart = parts[0]
-  const decimalPart = parts[1]
-  const formatted = parseInt(integerPart, 10).toLocaleString('de-DE')
-  if (decimalPart !== undefined) {
-    return formatted + '.' + decimalPart
-  }
-  return formatted
-}
-
-function parseInput(raw) {
-  if (!raw || raw.trim() === '') return null
-  const cleaned = raw.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
-  const num = parseFloat(cleaned)
-  return isNaN(num) ? null : num
-}
+import React from 'react'
 
 export default function ServiceValueForm({ serviceType, currency, serviceValue, onChange }) {
   const isRotodynamic = serviceType === 'rotodinamico'
   const currencyLabel = currency === 'USD' ? 'USD' : 'MM COP'
-  const [localValue, setLocalValue] = useState('')
-  const [isFocused, setIsFocused] = useState(false)
-
-  const handleChange = useCallback((e) => {
-    const raw = e.target.value
-    let newValue = raw.replace(/[^\d.,]/g, '')
-    const parts = newValue.split(/[.,]/)
-    if (parts.length > 2) {
-      newValue = parts[0] + '.' + parts.slice(1).join('')
-    }
-    const parsed = parseInput(newValue)
-    setLocalValue(newValue)
-    if (parsed !== null || newValue === '') {
-      onChange('serviceValue', parsed)
-    }
-  }, [onChange])
-
-  const handleFocus = useCallback(() => {
-    setIsFocused(true)
-    if (serviceValue !== null && serviceValue !== undefined) {
-      setLocalValue(serviceValue.toString())
-    } else {
-      setLocalValue('')
-    }
-  }, [serviceValue])
-
-  const handleBlur = useCallback(() => {
-    setIsFocused(false)
-    if (serviceValue !== null && serviceValue !== undefined) {
-      setLocalValue(formatWithSeparators(serviceValue))
-    }
-  }, [serviceValue])
-
-  const displayValue = localValue
 
   if (!isRotodynamic) {
     return (
@@ -116,22 +63,20 @@ export default function ServiceValueForm({ serviceType, currency, serviceValue, 
           </label>
           <div className="relative">
             <input
-              type="text"
-              inputMode="decimal"
-              value={displayValue}
-              onChange={handleChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              type="number"
+              value={serviceValue ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                onChange('serviceValue', val)
+              }}
               placeholder="Ej: 500"
+              step="any"
               className="w-full px-4 py-3 pr-16 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">
               {currencyLabel}
             </span>
           </div>
-          {isFocused && (
-            <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
-          )}
           <p className="text-xs text-navy-400 mt-2">
             Ingresa el valor total del servicio de diagnóstico rotodinámico.
             Este será usado como inversión inicial para el cálculo del ROI.

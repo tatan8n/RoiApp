@@ -214,12 +214,12 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
                   <p className="text-2xl text-navy-700">{formatCurrencyValue(results.investment)}</p>
                 </div>
                 <div className="text-right">
-                  <h3 className="font-bold text-navy-900">Costo Total (5 años)</h3>
+                  <h3 className="font-bold text-navy-900">Costo Total ({results.projection?.length || 5} años)</h3>
                   <p className="text-2xl text-navy-700">{formatCurrencyValue(results.totalPayments)}</p>
                 </div>
                 <div className="text-right">
                   <h3 className="font-bold text-navy-900">Ahorro Anual</h3>
-                  <p className="text-2xl text-green-600">{formatCurrencyValue(results.totalSavings / 5)}</p>
+                  <p className="text-2xl text-green-600">{formatCurrencyValue(results.totalSavings / (results.projection?.length || 5))}</p>
                 </div>
               </>
             ) : (

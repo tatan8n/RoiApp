@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { EQUIPMENT_MODELS } from '../utils/constants'
 
 function formatMM(value) {
@@ -9,34 +9,6 @@ function formatMM(value) {
 
 export default function EquipmentForm({ data, onChange }) {
   const selectedModel = EQUIPMENT_MODELS.find(m => m.id === data.modelId)
-  const [customPriceInput, setCustomPriceInput] = useState(data.customPrice ?? '')
-  const [isFocused, setIsFocused] = useState(false)
-
-  const handleCustomPriceChange = (e) => {
-    const raw = e.target.value
-    setCustomPriceInput(raw)
-    const cleaned = raw.replace(/[^0-9.,]/g, '').replace(/\./g, '').replace(',', '.')
-    const num = cleaned === '' ? null : parseFloat(cleaned)
-    onChange('customPrice', num)
-  }
-
-  const handleFocus = () => {
-    setIsFocused(true)
-    setCustomPriceInput(data.customPrice ?? '')
-    setTimeout(() => {
-      const input = document.querySelector('[data-custom-price]')
-      if (input) input.select()
-    }, 0)
-  }
-
-  const handleBlur = () => {
-    setIsFocused(false)
-    if (data.customPrice && data.customPrice > 0) {
-      setCustomPriceInput(formatMM(data.customPrice).replace('$ ', ''))
-    } else {
-      setCustomPriceInput('')
-    }
-  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
@@ -77,14 +49,14 @@ export default function EquipmentForm({ data, onChange }) {
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-500 font-semibold">$</span>
           <input
-            data-custom-price
-            type="text"
-            inputMode="decimal"
-            value={isFocused ? customPriceInput : (data.customPrice && data.customPrice > 0 ? formatMM(data.customPrice).replace('$ ', '') : customPriceInput)}
-            onChange={handleCustomPriceChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            type="number"
+            value={data.customPrice ?? ''}
+            onChange={(e) => {
+              const val = e.target.value === '' ? null : parseFloat(e.target.value)
+              onChange('customPrice', val)
+            }}
             placeholder="Ingrese precio si es diferente (en millones)"
+            step="any"
             className="w-full pl-8 pr-20 py-3 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">

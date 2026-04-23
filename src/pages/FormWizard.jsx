@@ -188,11 +188,7 @@ export default function FormWizard({
                   serviceType={formData.serviceType}
                   currency={formData.currency}
                   serviceValue={formData.rotodynamic?.serviceValue}
-                  onChange={(field, value) => {
-                    if (field === 'serviceValue') {
-                      updateRotodynamic(field, value)
-                    }
-                  }}
+                  onChange={(field, value) => updateRotodynamic(field, value)}
                 />
               )}
               {isService && isContratoMarco && (

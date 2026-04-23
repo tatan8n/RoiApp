@@ -188,11 +188,12 @@ export function useFormData() {
       const model = EQUIPMENT_MODELS.find(m => m.id === formData.equipment.modelId)
       return model ? model.price : 0
     } else if (isContratoMarco) {
-      return formData.contratoMarco.annualContractValue || 0
+      const val = formData.contratoMarco.annualContractValue
+      return val && val > 0 ? (formData.currency === 'COP' ? val * 1_000_000 : val) : 0
     } else {
       return formData.rotodynamic.serviceValue || 0
     }
-  }, [formData.equipment, formData.rotodynamic.serviceValue, formData.contratoMarco, formData.calculationType, isContratoMarco])
+  }, [formData.equipment, formData.rotodynamic.serviceValue, formData.contratoMarco, formData.calculationType, formData.currency, isContratoMarco])
 
   const getCompleteData = useCallback(() => {
     if (formData.calculationType === 'product') {
@@ -204,14 +205,18 @@ export function useFormData() {
         projectionYears: formData.financial.projectionYears
       }
     } else if (isContratoMarco) {
+      const annualContractValueMM = formData.contratoMarco.annualContractValue
+      const annualContractValueFull = annualContractValueMM && annualContractValueMM > 0
+        ? (formData.currency === 'COP' ? annualContractValueMM * 1_000_000 : annualContractValueMM)
+        : 0
       return {
-        investment: formData.contratoMarco.annualContractValue || 0,
+        investment: annualContractValueFull,
         currency: formData.currency,
         ...formData.operational,
         benchmarks: formData.benchmarks,
         discountRate: formData.financial.discountRate,
         projectionYears: formData.financial.projectionYears,
-        annualContractValue: formData.contratoMarco.annualContractValue,
+        annualContractValue: annualContractValueFull,
         inflationRate: formData.contratoMarco.inflationRate,
         billing: formData.operational.monthlyBilling ? formData.operational.monthlyBilling * 12 : null
       }

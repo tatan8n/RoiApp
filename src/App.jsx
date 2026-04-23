@@ -17,6 +17,7 @@ function App() {
     updateServiceType,
     updateCurrency,
     updateRotodynamic,
+    updateContratoMarco,
     nextStep,
     prevStep,
     getCompleteData,
@@ -60,6 +61,7 @@ function App() {
       updateRotodynamicBenchmarks={updateRotodynamicBenchmarks}
       updateFinancial={updateFinancial}
       updateRotodynamic={updateRotodynamic}
+      updateContratoMarco={updateContratoMarco}
       nextStep={nextStep}
       prevStep={prevStep}
       getCompleteData={getCompleteData}

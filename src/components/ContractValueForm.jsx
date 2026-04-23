@@ -1,90 +1,7 @@
-import React, { useState, useCallback } from 'react'
-
-function formatWithSeparators(value) {
-  if (value === null || value === undefined || value === '') return ''
-  const parts = value.toString().split('.')
-  const integerPart = parts[0]
-  const decimalPart = parts[1]
-  const formatted = parseInt(integerPart, 10).toLocaleString('de-DE')
-  if (decimalPart !== undefined) {
-    return formatted + '.' + decimalPart
-  }
-  return formatted
-}
-
-function parseInput(raw) {
-  if (!raw || raw.trim() === '') return null
-  const cleaned = raw.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
-  const num = parseFloat(cleaned)
-  return isNaN(num) ? null : num
-}
+import React from 'react'
 
 export default function ContractValueForm({ currency, annualContractValue, inflationRate, onChange }) {
   const currencyLabel = currency === 'USD' ? 'USD' : 'MM COP'
-  const [localValue, setLocalValue] = useState('')
-  const [localInflation, setLocalInflation] = useState('')
-  const [isFocusedValue, setIsFocusedValue] = useState(false)
-  const [isFocusedInflation, setIsFocusedInflation] = useState(false)
-
-  const handleValueChange = useCallback((e) => {
-    const raw = e.target.value
-    let newValue = raw.replace(/[^\d.,]/g, '')
-    const parts = newValue.split(/[.,]/)
-    if (parts.length > 2) {
-      newValue = parts[0] + '.' + parts.slice(1).join('')
-    }
-    const parsed = parseInput(newValue)
-    setLocalValue(newValue)
-    if (parsed !== null || newValue === '') {
-      onChange('annualContractValue', parsed)
-    }
-  }, [onChange])
-
-  const handleValueFocus = useCallback(() => {
-    setIsFocusedValue(true)
-    if (annualContractValue !== null && annualContractValue !== undefined) {
-      setLocalValue(annualContractValue.toString())
-    } else {
-      setLocalValue('')
-    }
-  }, [annualContractValue])
-
-  const handleValueBlur = useCallback(() => {
-    setIsFocusedValue(false)
-    if (annualContractValue !== null && annualContractValue !== undefined) {
-      setLocalValue(formatWithSeparators(annualContractValue))
-    }
-  }, [annualContractValue])
-
-  const handleInflationChange = useCallback((e) => {
-    const raw = e.target.value
-    let newValue = raw.replace(/[^\d.,]/g, '')
-    const parts = newValue.split(/[.,]/)
-    if (parts.length > 2) {
-      newValue = parts[0] + '.' + parts.slice(1).join('')
-    }
-    const parsed = parseInput(newValue)
-    setLocalInflation(newValue)
-    if (parsed !== null || newValue === '') {
-      onChange('inflationRate', parsed !== null ? parsed / 100 : null)
-    }
-  }, [onChange])
-
-  const handleInflationFocus = useCallback(() => {
-    setIsFocusedInflation(true)
-    if (inflationRate !== null && inflationRate !== undefined) {
-      setLocalInflation((inflationRate * 100).toString())
-    } else {
-      setLocalInflation('')
-    }
-  }, [inflationRate])
-
-  const handleInflationBlur = useCallback(() => {
-    setIsFocusedInflation(false)
-    if (inflationRate !== null && inflationRate !== undefined) {
-      setLocalInflation((inflationRate * 100).toFixed(0))
-    }
-  }, [inflationRate])
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
@@ -121,22 +38,20 @@ export default function ContractValueForm({ currency, annualContractValue, infla
           </label>
           <div className="relative">
             <input
-              type="text"
-              inputMode="decimal"
-              value={localValue}
-              onChange={handleValueChange}
-              onFocus={handleValueFocus}
-              onBlur={handleValueBlur}
+              type="number"
+              value={annualContractValue ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                onChange('annualContractValue', val)
+              }}
               placeholder="Ej: 120"
+              step="any"
               className="w-full px-4 py-3 pr-16 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">
               {currencyLabel}
             </span>
           </div>
-          {isFocusedValue && (
-            <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
-          )}
           <p className="text-xs text-navy-400 mt-2">
             Ingresa el valor total anual del contrato de servicio.
             Este valor se incrementará anualmente según la inflación que definas.
@@ -149,22 +64,20 @@ export default function ContractValueForm({ currency, annualContractValue, infla
           </label>
           <div className="relative">
             <input
-              type="text"
-              inputMode="decimal"
-              value={localInflation}
-              onChange={handleInflationChange}
-              onFocus={handleInflationFocus}
-              onBlur={handleInflationBlur}
+              type="number"
+              value={inflationRate !== null && inflationRate !== undefined ? (inflationRate * 100) : ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value) / 100
+                onChange('inflationRate', val)
+              }}
               placeholder="Ej: 4"
+              step="any"
               className="w-full px-4 py-3 pr-16 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">
               %
             </span>
           </div>
-          {isFocusedInflation && (
-            <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
-          )}
           <p className="text-xs text-navy-400 mt-2">
             Inflación anual del contrato. Típico: 3-5%. Este valor incrementará el costo del contrato cada año.
           </p>
