@@ -10,7 +10,7 @@ export default function InitialSelector({ calculationType, serviceType, currency
       <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full">
         <div className="text-center mb-8">
           <img
-            src="Logo A-MAQ (1)_Mesa de trabajo 1.png"
+            src="/logos/Logo A-MAQ (1)_Mesa de trabajo 1.png"
             alt="A-MAQ Logo"
             className="h-20 w-auto mx-auto"
             style={{ filter: 'brightness(0) contrast(1.2)' }}

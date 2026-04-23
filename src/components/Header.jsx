@@ -1,7 +1,7 @@
 import React from 'react'
 import { COLORS } from '../utils/constants'
 
-export default function Header({ logoPath = 'Logo A-MAQ (1)_Mesa de trabajo 1.png', onGoHome }) {
+export default function Header({ logoPath = '/logos/Logo A-MAQ (1)_Mesa de trabajo 1.png', onGoHome }) {
   return (
     <header className="bg-white border-b-4 border-navy-900 py-3 px-6 shadow-md">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
