@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS, SERVICE_TYPES, ROTODYNAMIC_BENCHMARKS } from '../utils/constants'
+import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS, SERVICE_TYPES, ROTODYNAMIC_BENCHMARKS, DEFAULT_INFLATION_RATE } from '../utils/constants'
 
 const initialFormData = {
   client: {
@@ -11,7 +11,7 @@ const initialFormData = {
     evaluationDate: new Date().toISOString().split('T')[0]
   },
   equipment: {
-    modelId: 'va3pro',
+    modelId: null,
     customPrice: null
   },
   calculationType: 'product',
@@ -19,6 +19,7 @@ const initialFormData = {
   currency: 'COP',
   rotodynamic: {
     serviceValue: null,
+    turbineType: null,
     numTurbines: null,
     technology: '',
     nominalCapacity: null,
@@ -35,6 +36,10 @@ const initialFormData = {
     heatRateDesign: null,
     heatRateActual: null,
     fuelCost: null
+  },
+  contratoMarco: {
+    annualContractValue: null,
+    inflationRate: DEFAULT_INFLATION_RATE
   },
   operational: {
     totalAssets: null,
@@ -121,6 +126,7 @@ export function useFormData() {
       ...prev,
       calculationType: type,
       serviceType: type === 'service' ? prev.serviceType || 'rotodinamico' : null,
+      equipment: type === 'product' ? { modelId: null, customPrice: null } : prev.equipment,
       currentStep: 1
     }))
   }, [])
@@ -146,6 +152,13 @@ export function useFormData() {
     }))
   }, [])
 
+  const updateContratoMarco = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      contratoMarco: { ...prev.contratoMarco, [field]: value === '' ? null : value }
+    }))
+  }, [])
+
   const nextStep = useCallback(() => {
     setCurrentStep(prev => Math.min(prev + 1, 4))
   }, [])
@@ -165,6 +178,8 @@ export function useFormData() {
     setCurrentStep(1)
   }, [])
 
+  const isContratoMarco = formData.calculationType === 'service' && formData.serviceType === 'contrato_marco'
+
   const getInvestment = useCallback(() => {
     if (formData.calculationType === 'product') {
       if (formData.equipment.customPrice && formData.equipment.customPrice > 0) {
@@ -172,10 +187,12 @@ export function useFormData() {
       }
       const model = EQUIPMENT_MODELS.find(m => m.id === formData.equipment.modelId)
       return model ? model.price : 0
+    } else if (isContratoMarco) {
+      return formData.contratoMarco.annualContractValue || 0
     } else {
       return formData.rotodynamic.serviceValue || 0
     }
-  }, [formData.equipment, formData.rotodynamic.serviceValue, formData.calculationType])
+  }, [formData.equipment, formData.rotodynamic.serviceValue, formData.contratoMarco, formData.calculationType, isContratoMarco])
 
   const getCompleteData = useCallback(() => {
     if (formData.calculationType === 'product') {
@@ -185,6 +202,18 @@ export function useFormData() {
         benchmarks: formData.benchmarks,
         discountRate: formData.financial.discountRate,
         projectionYears: formData.financial.projectionYears
+      }
+    } else if (isContratoMarco) {
+      return {
+        investment: formData.contratoMarco.annualContractValue || 0,
+        currency: formData.currency,
+        ...formData.operational,
+        benchmarks: formData.benchmarks,
+        discountRate: formData.financial.discountRate,
+        projectionYears: formData.financial.projectionYears,
+        annualContractValue: formData.contratoMarco.annualContractValue,
+        inflationRate: formData.contratoMarco.inflationRate,
+        billing: formData.operational.monthlyBilling ? formData.operational.monthlyBilling * 12 : null
       }
     } else {
       return {
@@ -197,7 +226,7 @@ export function useFormData() {
         billing: formData.rotodynamic.billingAffected
       }
     }
-  }, [formData, getInvestment])
+  }, [formData, getInvestment, isContratoMarco])
 
   return {
     formData,
@@ -213,6 +242,7 @@ export function useFormData() {
     updateServiceType,
     updateCurrency,
     updateRotodynamic,
+    updateContratoMarco,
     nextStep,
     prevStep,
     goToStep,

@@ -1,9 +1,12 @@
 import React, { useState } from 'react'
-import { ROTODYNAMIC_SECTIONS, ROTODYNAMIC_FIELDS } from '../utils/constants'
+import { ROTODYNAMIC_SECTIONS, ROTODYNAMIC_FIELDS, TURBINE_TYPES } from '../utils/constants'
 
 export default function RotodynamicForm({ data, onChange, currency }) {
   const [expandedSection, setExpandedSection] = useState('inventory')
+  const [focusedFieldId, setFocusedFieldId] = useState(null)
   const currencyLabel = currency === 'USD' ? 'USD' : 'MM COP'
+
+  const selectedTurbineType = TURBINE_TYPES.find(t => t.id === data.turbineType)
 
   const hasValue = (fieldId) => {
     const val = data[fieldId]
@@ -35,6 +38,51 @@ export default function RotodynamicForm({ data, onChange, currency }) {
       return currencyLabel
     }
     return field.unit
+  }
+
+  const getBenchmarkHint = (fieldId) => {
+    const field = ROTODYNAMIC_FIELDS.find(f => f.id === fieldId)
+    if (!field || !field.benchmarkHint) return null
+
+    if (!selectedTurbineType || !selectedTurbineType.benchmarks[fieldId]) {
+      return field.benchmarkHint
+    }
+
+    const turbineBenchmark = selectedTurbineType.benchmarks[fieldId]
+
+    if (fieldId === 'nominalCapacity' && turbineBenchmark) {
+      return `Gas: 100-600 MW; Vapor: 200-1000 MW; Hydro: 50-700 MW (Benchmark para ${selectedTurbineType.name}: ${turbineBenchmark.min}-${turbineBenchmark.max} ${turbineBenchmark.unit})`
+    }
+    if (fieldId === 'avgStopDuration' && turbineBenchmark) {
+      return `Benchmark para ${selectedTurbineType.name}: ${turbineBenchmark.min}-${turbineBenchmark.max} ${turbineBenchmark.unit}. Con predictivo reduce 35-45%. Fuente: EPRI`
+    }
+    if (fieldId === 'mttr' && turbineBenchmark) {
+      return `Benchmark para ${selectedTurbineType.name}: ${turbineBenchmark.min}-${turbineBenchmark.max} ${turbineBenchmark.unit}. Diagnóstico predictivo reduce MTTR 40%. Fuente: IEEE`
+    }
+    if (fieldId === 'criticalFailures' && turbineBenchmark) {
+      return `Benchmark para ${selectedTurbineType.name}: ${turbineBenchmark.min}-${turbineBenchmark.max} ${turbineBenchmark.unit}. Con predictivo: 0.2-1.0`
+    }
+    if (fieldId === 'costPerHourStop' && turbineBenchmark) {
+      return `VENS estimado para ${selectedTurbineType.name}: ~$${turbineBenchmark.vens} USD/MWh. Fuente: EPRI, XM`
+    }
+
+    return field.benchmarkHint
+  }
+
+  const getStep = (fieldId) => {
+    const field = ROTODYNAMIC_FIELDS.find(f => f.id === fieldId)
+    if (!field) return 'any'
+    if (field.step) return field.step
+    if (field.isCurrency) return '0.01'
+    if (fieldId === 'nominalCapacity') return '0.1'
+    if (fieldId === 'yearsOfOperation') return '0.5'
+    if (fieldId === 'avgStopDuration' || fieldId === 'mttr') return '0.5'
+    if (fieldId === 'heatRateDesign' || fieldId === 'heatRateActual') return '1'
+    return '1'
+  }
+
+  const isIntegerField = (fieldId) => {
+    return fieldId === 'numTurbines' || fieldId === 'technology'
   }
 
   const renderSection = (section) => {
@@ -95,34 +143,41 @@ export default function RotodynamicForm({ data, onChange, currency }) {
                   </label>
                   <input
                     type="text"
-                    value={data[fieldId] || ''}
+                    value={data[fieldId] ?? ''}
                     onChange={(e) => onChange(fieldId, e.target.value)}
                     placeholder={field.placeholder}
                     className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-navy-800"
                   />
                   {field.benchmarkHint && (
-                    <p className="text-xs text-navy-400 mt-1">{field.benchmarkHint}</p>
+                    <p className="text-xs text-navy-400 mt-1">{getBenchmarkHint(fieldId)}</p>
                   )}
                 </div>
               )
             }
 
-            if (fieldId === 'numTurbines' || fieldId === 'yearsOfOperation') {
+            if (fieldId === 'numTurbines') {
               return (
                 <div key={fieldId}>
                   <label className="block text-sm font-medium text-navy-700 mb-1">
                     {field.label}
+                    <span className="text-navy-400 ml-1">({field.unit})</span>
                   </label>
                   <input
                     type="number"
                     min="0"
-                    value={data[fieldId] || ''}
-                    onChange={(e) => onChange(fieldId, e.target.value === '' ? null : parseInt(e.target.value))}
+                    step="1"
+                    value={data[fieldId] ?? ''}
+                    onChange={(e) => onChange(fieldId, e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                    onFocus={() => setFocusedFieldId(fieldId)}
+                    onBlur={() => setFocusedFieldId(null)}
                     placeholder={field.placeholder}
                     className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-navy-800"
                   />
-                  {field.benchmarkHint && (
-                    <p className="text-xs text-navy-400 mt-1">{field.benchmarkHint}</p>
+                  {focusedFieldId === fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+                  )}
+                  {field.benchmarkHint && focusedFieldId !== fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">{getBenchmarkHint(fieldId)}</p>
                   )}
                 </div>
               )
@@ -139,13 +194,18 @@ export default function RotodynamicForm({ data, onChange, currency }) {
                     type="number"
                     min="0"
                     step="0.1"
-                    value={data[fieldId] || ''}
+                    value={data[fieldId] ?? ''}
                     onChange={(e) => onChange(fieldId, e.target.value === '' ? null : parseFloat(e.target.value))}
+                    onFocus={() => setFocusedFieldId(fieldId)}
+                    onBlur={() => setFocusedFieldId(null)}
                     placeholder={field.placeholder}
                     className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-navy-800"
                   />
-                  {field.benchmarkHint && (
-                    <p className="text-xs text-navy-400 mt-1">{field.benchmarkHint}</p>
+                  {focusedFieldId === fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+                  )}
+                  {field.benchmarkHint && focusedFieldId !== fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">{getBenchmarkHint(fieldId)}</p>
                   )}
                 </div>
               )
@@ -162,13 +222,18 @@ export default function RotodynamicForm({ data, onChange, currency }) {
                     type="number"
                     min="0"
                     step="1"
-                    value={data[fieldId] || ''}
+                    value={data[fieldId] ?? ''}
                     onChange={(e) => onChange(fieldId, e.target.value === '' ? null : parseFloat(e.target.value))}
+                    onFocus={() => setFocusedFieldId(fieldId)}
+                    onBlur={() => setFocusedFieldId(null)}
                     placeholder={field.placeholder}
                     className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-navy-800"
                   />
-                  {field.benchmarkHint && (
-                    <p className="text-xs text-navy-400 mt-1">{field.benchmarkHint}</p>
+                  {focusedFieldId === fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+                  )}
+                  {field.benchmarkHint && focusedFieldId !== fieldId && (
+                    <p className="text-xs text-navy-400 mt-1">{getBenchmarkHint(fieldId)}</p>
                   )}
                   {fieldId === 'heatRateActual' && data.heatRateDesign && data.heatRateActual < data.heatRateDesign && (
                     <p className="text-xs text-amber-600 mt-1">⚠️ El heat rate actual es menor que el de diseño (esto puede indicar buena condición)</p>
@@ -186,14 +251,26 @@ export default function RotodynamicForm({ data, onChange, currency }) {
                 <input
                   type="number"
                   min="0"
-                  step={field.isCurrency ? '0.01' : '1'}
-                  value={data[fieldId] || ''}
-                  onChange={(e) => onChange(fieldId, e.target.value === '' ? null : parseFloat(e.target.value))}
+                  step={getStep(fieldId)}
+                  value={data[fieldId] ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      onChange(fieldId, null)
+                    } else {
+                      onChange(fieldId, parseFloat(val))
+                    }
+                  }}
+                  onFocus={() => setFocusedFieldId(fieldId)}
+                  onBlur={() => setFocusedFieldId(null)}
                   placeholder={field.placeholder}
                   className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-navy-800"
                 />
-                {field.benchmarkHint && (
-                  <p className="text-xs text-navy-400 mt-1">{field.benchmarkHint}</p>
+                {focusedFieldId === fieldId && (
+                  <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+                )}
+                {field.benchmarkHint && focusedFieldId !== fieldId && (
+                  <p className="text-xs text-navy-400 mt-1">{getBenchmarkHint(fieldId)}</p>
                 )}
               </div>
             )
@@ -222,6 +299,48 @@ export default function RotodynamicForm({ data, onChange, currency }) {
           </div>
         </div>
       </div>
+
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <label className="block text-sm font-medium text-navy-700 mb-3">
+          Tipo de turbina (opcional)
+        </label>
+        <p className="text-xs text-navy-500 mb-3">
+          Selecciona el tipo de turbina para ver benchmarks específicos en cada campo. Si no conoces el tipo, puedes dejarlo vacío y usar los benchmarks generales.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {TURBINE_TYPES.map(turbine => (
+            <label
+              key={turbine.id}
+              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                data.turbineType === turbine.id
+                  ? 'border-navy-600 bg-navy-50'
+                  : 'border-navy-200 hover:border-navy-400'
+              }`}
+            >
+              <input
+                type="radio"
+                name="turbineType"
+                value={turbine.id}
+                checked={data.turbineType === turbine.id}
+                onChange={() => onChange('turbineType', turbine.id)}
+                className="w-4 h-4 text-navy-600"
+              />
+              <div className="ml-2">
+                <span className="font-medium text-navy-800">{turbine.name}</span>
+              </div>
+            </label>
+          ))}
+          {data.turbineType && (
+            <button
+              onClick={() => onChange('turbineType', null)}
+              className="text-xs text-navy-500 hover:text-navy-700 underline self-center"
+            >
+              Limpiar selección
+            </button>
+          )}
+        </div>
+      </div>
+
       {ROTODYNAMIC_SECTIONS.map(renderSection)}
     </div>
   )

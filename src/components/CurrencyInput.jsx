@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 
-function formatForDisplay(value) {
+function formatWithSeparators(value) {
   if (value === null || value === undefined || value === '') return ''
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return ''
-  return num.toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  })
+
+  const parts = value.toString().split('.')
+  const integerPart = parts[0]
+  const decimalPart = parts[1]
+
+  const formatted = parseInt(integerPart, 10).toLocaleString('de-DE')
+
+  if (decimalPart !== undefined) {
+    return formatted + '.' + decimalPart
+  }
+  return formatted
 }
 
 function parseInput(raw) {
@@ -17,30 +22,81 @@ function parseInput(raw) {
   return isNaN(num) ? null : num
 }
 
+function getCursorPosition(value, cursorPos, oldValue, oldCursorPos) {
+  if (!value || value.length <= 1) return cursorPos
+
+  const oldLength = oldValue ? oldValue.length : 0
+  const newLength = value.length
+
+  const diff = newLength - oldLength
+
+  if (diff > 0) {
+    const addedChar = value[cursorPos - 1]
+    if (addedChar === ',' || addedChar === '.') {
+      return cursorPos
+    }
+    if (diff > 1) {
+      return cursorPos
+    }
+    const oldFormatted = oldValue ? formatWithSeparators(parseInput(oldValue)) : ''
+    const oldCommaCount = (oldFormatted.match(/,/g) || []).length
+    const newCommaCount = (value.match(/,/g) || []).length
+
+    if (newCommaCount > oldCommaCount) {
+      return cursorPos + 1
+    }
+  } else if (diff < 0) {
+    return cursorPos
+  }
+
+  return cursorPos
+}
+
 export default function CurrencyInput({ field, value, onChange }) {
   const isCurrency = field.isCurrency || false
-  const [localValue, setLocalValue] = useState(value ?? '')
+  const [localValue, setLocalValue] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef(null)
 
   const unitLabel = isCurrency ? 'MM COP' : field.unit
 
   useEffect(() => {
-    if (!isFocused) {
-      setLocalValue(value ?? '')
+    if (!isFocused && value !== null && value !== undefined) {
+      const formatted = formatWithSeparators(value)
+      setLocalValue(formatted)
     }
   }, [value, isFocused])
 
   const handleChange = useCallback((e) => {
     const raw = e.target.value
-    const parsed = parseInput(raw)
-    setLocalValue(raw)
-    onChange(field.id, parsed)
-  }, [field.id, onChange])
+    const oldValue = localValue
+
+    let newValue = raw
+
+    if (isFocused) {
+      newValue = raw.replace(/[^\d.,]/g, '')
+
+      const parts = newValue.split(/[.,]/)
+      if (parts.length > 2) {
+        newValue = parts[0] + '.' + parts.slice(1).join('')
+      }
+    }
+
+    const parsed = parseInput(newValue)
+    setLocalValue(newValue)
+
+    if (parsed !== null || newValue === '') {
+      onChange(field.id, parsed)
+    }
+  }, [field.id, onChange, isFocused, localValue])
 
   const handleFocus = useCallback(() => {
     setIsFocused(true)
-    setLocalValue(value ?? '')
+    if (value !== null && value !== undefined) {
+      setLocalValue(value.toString())
+    } else {
+      setLocalValue('')
+    }
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.select()
@@ -50,18 +106,19 @@ export default function CurrencyInput({ field, value, onChange }) {
 
   const handleBlur = useCallback(() => {
     setIsFocused(false)
-    setLocalValue(value ?? '')
+    if (value !== null && value !== undefined) {
+      const formatted = formatWithSeparators(value)
+      setLocalValue(formatted)
+    }
   }, [value])
 
-  const displayValue = isFocused
-    ? (localValue ?? '')
-    : formatForDisplay(value)
+  const displayValue = localValue
 
   let calculatedHint = null
-  if (isCurrency && field.id === 'technicianMonthlySalary' && value && value > 0) {
+  if (isCurrency && field.id === 'technicianMonthlySalary' && value !== null && value > 0) {
     const fullSalary = value * 1_000_000
     const hourCost = (fullSalary * 1.75) / 240
-    calculatedHint = `Costo hora-hombre calculado: ~${formatForDisplay(Math.round(hourCost))} COP/h (salario × 1.75 / 240h)`
+    calculatedHint = `Costo hora-hombre calculado: ~${formatWithSeparators(Math.round(hourCost))} COP/h (salario × 1.75 / 240h)`
   }
 
   return (
@@ -90,6 +147,9 @@ export default function CurrencyInput({ field, value, onChange }) {
           {unitLabel}
         </span>
       </div>
+      {isFocused && (
+        <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+      )}
       {calculatedHint && (
         <p className="text-xs text-green-600 mt-1">{calculatedHint}</p>
       )}

@@ -4,12 +4,36 @@ import KPICard from '../components/KPICard'
 import BenefitsChart from '../components/BenefitsChart'
 import TimelineChart from '../components/TimelineChart'
 import CertaintyMeter from '../components/CertaintyMeter'
-import { COLORS, EQUIPMENT_MODELS } from '../utils/constants'
+import { COLORS, EQUIPMENT_MODELS, SERVICE_TYPES } from '../utils/constants'
 import { formatCurrency } from '../utils/format'
 import { ROI_WARNING_THRESHOLD, ROI_DANGER_THRESHOLD } from '../utils/calculations'
 
 export default function ResultsDashboard({ formData, results, onBack, onGoHome, onExportHTML }) {
+  const isProduct = formData.calculationType === 'product'
+  const isService = formData.calculationType === 'service'
+  const isRotodynamic = formData.serviceType === 'rotodinamico'
+  const isContratoMarco = isService && formData.serviceType === 'contrato_marco'
+
   const selectedModel = EQUIPMENT_MODELS.find(m => m.id === formData.equipment?.modelId)
+  const selectedService = SERVICE_TYPES.find(s => s.id === formData.serviceType)
+
+  const getSelectedItemName = () => {
+    if (isProduct) {
+      return selectedModel?.name || 'Personalizado'
+    }
+    if (isContratoMarco) {
+      return 'Contrato Marco'
+    }
+    return selectedService?.name || 'Servicio'
+  }
+
+  const getSelectedItemLabel = () => {
+    if (isProduct) {
+      return 'Equipo Seleccionado'
+    }
+    return 'Servicio Seleccionado'
+  }
+
   const currency = formData.currency || 'COP'
   const formatCurrencyValue = (value) => formatCurrency(value, currency)
 
@@ -44,6 +68,11 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
               </h1>
               <p className="text-navy-500">
                 {formData.client?.companyName || 'Cliente'} | {formData.client?.sector || 'Sector'}
+                {isService && selectedService && (
+                  <span className="ml-2 text-navy-600">
+                    | {selectedService.name}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -170,26 +199,45 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         <div className="mt-6 p-4 bg-white rounded-xl shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-navy-900">Equipo Seleccionado</h3>
-              <p className="text-lg text-navy-700">{selectedModel?.name || 'Personalizado'}</p>
+              <h3 className="font-bold text-navy-900">{getSelectedItemLabel()}</h3>
+              <p className="text-lg text-navy-700">{getSelectedItemName()}</p>
               {results.manHourCost > 0 && (
                 <p className="text-xs text-navy-400 mt-1">
                   Costo hora-hombre calculado: {formatCurrencyValue(results.manHourCost)}/h
                 </p>
               )}
             </div>
-            <div className="text-right">
-              <h3 className="font-bold text-navy-900">Inversión Total</h3>
-              <p className="text-2xl text-navy-700">{formatCurrencyValue(results.investment)}</p>
-            </div>
-            <div className="text-right">
-              <h3 className="font-bold text-navy-900">Ahorro Anual</h3>
-              <p className="text-2xl text-green-600">{formatCurrencyValue(results.totalSavings)}</p>
-            </div>
-            <div className="text-right">
-              <h3 className="font-bold text-navy-900">Ahorro Mensual</h3>
-              <p className="text-xl text-green-500">{formatCurrencyValue(results.monthlySavings)}</p>
-            </div>
+            {isContratoMarco ? (
+              <>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Valor Anual</h3>
+                  <p className="text-2xl text-navy-700">{formatCurrencyValue(results.investment)}</p>
+                </div>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Costo Total (5 años)</h3>
+                  <p className="text-2xl text-navy-700">{formatCurrencyValue(results.totalPayments)}</p>
+                </div>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Ahorro Anual</h3>
+                  <p className="text-2xl text-green-600">{formatCurrencyValue(results.totalSavings / 5)}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Inversión Total</h3>
+                  <p className="text-2xl text-navy-700">{formatCurrencyValue(results.investment)}</p>
+                </div>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Ahorro Anual</h3>
+                  <p className="text-2xl text-green-600">{formatCurrencyValue(results.totalSavings)}</p>
+                </div>
+                <div className="text-right">
+                  <h3 className="font-bold text-navy-900">Ahorro Mensual</h3>
+                  <p className="text-xl text-green-500">{formatCurrencyValue(results.monthlySavings)}</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

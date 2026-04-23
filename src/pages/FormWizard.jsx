@@ -1,5 +1,5 @@
 import React from 'react'
-import { STEPS_CONFIG, ROTODYNAMIC_STEPS_CONFIG } from '../utils/constants'
+import { STEPS_CONFIG, ROTODYNAMIC_STEPS_CONFIG, CONTRATO_MARCO_STEPS_CONFIG } from '../utils/constants'
 import Header from '../components/Header'
 import StepIndicator from '../components/StepIndicator'
 import ClientForm from '../components/ClientForm'
@@ -11,10 +11,11 @@ import NavigationButtons from '../components/NavigationButtons'
 import ResultsDashboard from './ResultsDashboard'
 import RotodynamicForm from '../components/RotodynamicForm'
 import RotodynamicBenchmarkForm from '../components/RotodynamicBenchmarkForm'
-import { calculateAll } from '../utils/calculations'
+import { calculateAll, calculateAllContratoMarco } from '../utils/calculations'
 import { calculateAllRotodynamic } from '../utils/calculationsRotodynamic'
 import { downloadHTML } from '../utils/htmlExporter'
 import ServiceValueForm from '../components/ServiceValueForm'
+import ContractValueForm from '../components/ContractValueForm'
 
 export default function FormWizard({
   formData,
@@ -26,6 +27,7 @@ export default function FormWizard({
   updateRotodynamicBenchmarks,
   updateFinancial,
   updateRotodynamic,
+  updateContratoMarco,
   nextStep,
   prevStep,
   getCompleteData,
@@ -38,12 +40,15 @@ export default function FormWizard({
   const isProduct = formData.calculationType === 'product'
   const isService = formData.calculationType === 'service'
   const isRotodynamic = formData.serviceType === 'rotodinamico'
+  const isContratoMarco = isService && formData.serviceType === 'contrato_marco'
 
   const handleCalculate = () => {
     const data = getCompleteData()
     let calcResults
     if (isRotodynamic) {
       calcResults = calculateAllRotodynamic(data)
+    } else if (isContratoMarco) {
+      calcResults = calculateAllContratoMarco(data)
     } else {
       calcResults = calculateAll(data)
     }
@@ -71,23 +76,27 @@ export default function FormWizard({
       } else {
         nextStep()
       }
-    } else {
-      if (isRotodynamic) {
-        if (currentStep === 2) {
-          nextStep()
-        } else if (currentStep === 3) {
-          handleCalculate()
-        } else {
-          nextStep()
-        }
+    } else if (isRotodynamic) {
+      if (currentStep === 2) {
+        nextStep()
+      } else if (currentStep === 3) {
+        handleCalculate()
       } else {
-        if (currentStep === 2) {
-          nextStep()
-        } else if (currentStep === 3) {
-          handleCalculate()
-        } else {
-          nextStep()
-        }
+        nextStep()
+      }
+    } else if (isContratoMarco) {
+      if (currentStep === 4) {
+        handleCalculate()
+      } else {
+        nextStep()
+      }
+    } else {
+      if (currentStep === 2) {
+        nextStep()
+      } else if (currentStep === 3) {
+        handleCalculate()
+      } else {
+        nextStep()
       }
     }
   }
@@ -108,6 +117,9 @@ export default function FormWizard({
     if (isRotodynamic) {
       return ROTODYNAMIC_STEPS_CONFIG
     }
+    if (isContratoMarco) {
+      return CONTRATO_MARCO_STEPS_CONFIG
+    }
     if (isService) {
       return [
         { id: 1, title: 'Cliente y Servicio', description: 'Información del cliente y tipo de servicio' },
@@ -125,6 +137,45 @@ export default function FormWizard({
       <Header onGoHome={onGoHome} />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {isService && (
+          <div className="mb-4 p-3 bg-navy-100 rounded-lg border border-navy-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔍</span>
+              <span className="text-navy-700 font-medium">
+                Servicio seleccionado: <strong>
+                  {formData.serviceType === 'rotodinamico' ? 'Análisis Rotodinámico' : 'Contrato Marco'}
+                </strong>
+              </span>
+              {formData.currency && (
+                <span className="text-navy-500 text-sm ml-2">
+                  | Moneda: {formData.currency === 'USD' ? 'USD' : 'COP (Millones)'}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => onGoHome()}
+              className="text-sm text-navy-500 hover:text-navy-700 underline"
+            >
+              Cambiar selección
+            </button>
+          </div>
+        )}
+        {isProduct && (
+          <div className="mb-4 p-3 bg-navy-100 rounded-lg border border-navy-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📦</span>
+              <span className="text-navy-700 font-medium">
+                Producto seleccionado: <strong>Colectores de Vibración</strong>
+              </span>
+            </div>
+            <button
+              onClick={() => onGoHome()}
+              className="text-sm text-navy-500 hover:text-navy-700 underline"
+            >
+              Cambiar selección
+            </button>
+          </div>
+        )}
         <StepIndicator currentStep={currentStep} steps={getStepsConfig()} />
 
         <div className="mt-6">
@@ -132,7 +183,7 @@ export default function FormWizard({
             <div className="space-y-6">
               <ClientForm data={formData.client} onChange={updateClient} />
               {isProduct && <EquipmentForm data={formData.equipment} onChange={updateEquipment} />}
-              {isService && (
+              {isService && isRotodynamic && (
                 <ServiceValueForm
                   serviceType={formData.serviceType}
                   currency={formData.currency}
@@ -143,6 +194,21 @@ export default function FormWizard({
                     }
                   }}
                 />
+              )}
+              {isService && isContratoMarco && (
+                <ContractValueForm
+                  currency={formData.currency}
+                  annualContractValue={formData.contratoMarco?.annualContractValue}
+                  inflationRate={formData.contratoMarco?.inflationRate}
+                  onChange={updateContratoMarco}
+                />
+              )}
+              {isService && !isRotodynamic && !isContratoMarco && (
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <p className="text-navy-600">
+                    Selecciona un tipo de servicio para continuar.
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -159,13 +225,8 @@ export default function FormWizard({
             />
           )}
 
-          {currentStep === 2 && isService && !isRotodynamic && (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-navy-900 mb-4">Datos del Servicio</h2>
-              <p className="text-navy-600">
-                La metodología de preguntas para este servicio está en desarrollo.
-              </p>
-            </div>
+          {currentStep === 2 && isService && isContratoMarco && (
+            <OperationalForm data={formData.operational} onChange={updateOperational} />
           )}
 
           {currentStep === 3 && isProduct && (
@@ -179,13 +240,8 @@ export default function FormWizard({
             />
           )}
 
-          {currentStep === 3 && isService && !isRotodynamic && (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-navy-900 mb-4">Confirmación</h2>
-              <p className="text-navy-600">
-                Revise la información del servicio y continúe.
-              </p>
-            </div>
+          {currentStep === 3 && isService && isContratoMarco && (
+            <BenchmarkForm data={formData.benchmarks} onChange={updateBenchmarks} />
           )}
 
           {currentStep === 4 && isProduct && (
@@ -195,15 +251,34 @@ export default function FormWizard({
           {currentStep === 4 && isService && isRotodynamic && (
             <FinancialForm data={formData.financial} onChange={updateFinancial} />
           )}
+
+          {currentStep === 4 && isService && isContratoMarco && (
+            <FinancialForm
+              data={formData.financial}
+              onChange={updateFinancial}
+              isContratoMarco={true}
+              inflationRate={formData.contratoMarco?.inflationRate}
+              onInflationChange={updateContratoMarco}
+            />
+          )}
+
+          {currentStep === 5 && isService && isContratoMarco && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-navy-900 mb-4">Resumen del Contrato Marco</h2>
+              <p className="text-navy-600">
+                Revisa la información y haz clic en "Calcular ROI" para ver los resultados.
+              </p>
+            </div>
+          )}
         </div>
 
         <NavigationButtons
           onPrev={prevStep}
           onNext={handleNext}
           showPrev={currentStep > 1}
-          showNext={currentStep < (isProduct ? 4 : isRotodynamic ? 4 : 3)}
-          showCalculate={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : 3) && isService}
-          nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
+          showNext={currentStep < (isProduct ? 4 : isRotodynamic ? 4 : isContratoMarco ? 5 : 3)}
+          showCalculate={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService}
+          nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
         />
       </div>
     </div>

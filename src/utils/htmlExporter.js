@@ -1,8 +1,30 @@
-import { EQUIPMENT_MODELS } from './constants.js'
+import { EQUIPMENT_MODELS, SERVICE_TYPES } from './constants.js'
 import { formatMillionsCOP } from './format.js'
 
 export function generateHTML(formData, results) {
+  const isProduct = formData.calculationType === 'product'
+  const isService = formData.calculationType === 'service'
+  const isContratoMarco = isService && formData.serviceType === 'contrato_marco'
   const selectedModel = EQUIPMENT_MODELS.find(m => m.id === formData.equipment?.modelId)
+  const selectedService = SERVICE_TYPES.find(s => s.id === formData.serviceType)
+
+  const getSelectedItemName = () => {
+    if (isProduct) {
+      return selectedModel?.name || 'Personalizado'
+    }
+    if (isContratoMarco) {
+      return 'Contrato Marco'
+    }
+    return selectedService?.name || 'Servicio'
+  }
+
+  const getSelectedItemLabel = () => {
+    if (isProduct) {
+      return 'Equipo Seleccionado'
+    }
+    return 'Servicio Seleccionado'
+  }
+
   const formatCurrency = formatMillionsCOP
 
   const factorsData = Object.values(results.factors)
@@ -162,11 +184,11 @@ export function generateHTML(formData, results) {
     ` : ''}
 
     <div class="card">
-      <div class="card-title">Equipo y Resumen Financiero</div>
+      <div class="card-title">${isService ? 'Servicio' : 'Equipo'} y Resumen Financiero</div>
       <div class="info-grid">
         <div class="info-item">
-          <label>Equipo Seleccionado</label>
-          <div class="value">${selectedModel?.name || 'Personalizado'}</div>
+          <label>${getSelectedItemLabel()}</label>
+          <div class="value">${getSelectedItemName()}</div>
         </div>
         <div class="info-item">
           <label>Inversión Total</label>

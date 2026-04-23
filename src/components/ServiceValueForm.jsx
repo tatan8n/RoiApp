@@ -1,13 +1,15 @@
 import React, { useState, useCallback } from 'react'
 
-function formatForDisplay(value) {
+function formatWithSeparators(value) {
   if (value === null || value === undefined || value === '') return ''
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return ''
-  return num.toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
+  const parts = value.toString().split('.')
+  const integerPart = parts[0]
+  const decimalPart = parts[1]
+  const formatted = parseInt(integerPart, 10).toLocaleString('de-DE')
+  if (decimalPart !== undefined) {
+    return formatted + '.' + decimalPart
+  }
+  return formatted
 }
 
 function parseInput(raw) {
@@ -20,29 +22,40 @@ function parseInput(raw) {
 export default function ServiceValueForm({ serviceType, currency, serviceValue, onChange }) {
   const isRotodynamic = serviceType === 'rotodinamico'
   const currencyLabel = currency === 'USD' ? 'USD' : 'MM COP'
-  const [localValue, setLocalValue] = useState(serviceValue ?? '')
+  const [localValue, setLocalValue] = useState('')
   const [isFocused, setIsFocused] = useState(false)
 
   const handleChange = useCallback((e) => {
     const raw = e.target.value
-    const parsed = parseInput(raw)
-    setLocalValue(raw)
-    onChange('serviceValue', parsed)
+    let newValue = raw.replace(/[^\d.,]/g, '')
+    const parts = newValue.split(/[.,]/)
+    if (parts.length > 2) {
+      newValue = parts[0] + '.' + parts.slice(1).join('')
+    }
+    const parsed = parseInput(newValue)
+    setLocalValue(newValue)
+    if (parsed !== null || newValue === '') {
+      onChange('serviceValue', parsed)
+    }
   }, [onChange])
 
   const handleFocus = useCallback(() => {
     setIsFocused(true)
-    setLocalValue(serviceValue ?? '')
+    if (serviceValue !== null && serviceValue !== undefined) {
+      setLocalValue(serviceValue.toString())
+    } else {
+      setLocalValue('')
+    }
   }, [serviceValue])
 
   const handleBlur = useCallback(() => {
     setIsFocused(false)
-    setLocalValue(serviceValue ?? '')
+    if (serviceValue !== null && serviceValue !== undefined) {
+      setLocalValue(formatWithSeparators(serviceValue))
+    }
   }, [serviceValue])
 
-  const displayValue = isFocused
-    ? (localValue ?? '')
-    : formatForDisplay(serviceValue)
+  const displayValue = localValue
 
   if (!isRotodynamic) {
     return (
@@ -116,6 +129,9 @@ export default function ServiceValueForm({ serviceType, currency, serviceValue, 
               {currencyLabel}
             </span>
           </div>
+          {isFocused && (
+            <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+          )}
           <p className="text-xs text-navy-400 mt-2">
             Ingresa el valor total del servicio de diagnóstico rotodinámico.
             Este será usado como inversión inicial para el cálculo del ROI.

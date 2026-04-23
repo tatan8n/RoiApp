@@ -1,11 +1,11 @@
 import React from 'react'
 import InputField from './InputField'
 
-export default function FinancialForm({ data, onChange }) {
+export default function FinancialForm({ data, onChange, isContratoMarco, inflationRate, onInflationChange }) {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
       <h2 className="text-xl font-bold text-navy-900 mb-6">Parámetros Financieros</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
         <div className="mb-4">
           <label className="block text-navy-700 text-sm font-medium mb-1">
@@ -43,6 +43,31 @@ export default function FinancialForm({ data, onChange }) {
             ))}
           </select>
         </div>
+
+        {isContratoMarco && (
+          <div className="mb-4 md:col-span-2">
+            <label className="block text-navy-700 text-sm font-medium mb-1">
+              Inflación Anual del Contrato
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="0"
+                max="15"
+                step="0.5"
+                value={(inflationRate || 0.04) * 100}
+                onChange={(e) => onInflationChange('inflationRate', parseFloat(e.target.value) / 100)}
+                className="flex-1 h-2 bg-navy-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="w-16 text-right font-bold text-navy-700">
+                {((inflationRate || 0.04) * 100).toFixed(1)}%
+              </span>
+            </div>
+            <p className="text-navy-400 text-xs mt-1">
+              Incremento anual del valor del contrato. Típico: 3-5%
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">

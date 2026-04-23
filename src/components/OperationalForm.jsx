@@ -4,6 +4,7 @@ import CurrencyInput from './CurrencyInput'
 
 export default function OperationalForm({ data, onChange }) {
   const [expandedSection, setExpandedSection] = useState('equipment')
+  const [focusedFieldId, setFocusedFieldId] = useState(null)
 
   const getFieldValue = (fieldId) => data[fieldId]
 
@@ -14,7 +15,7 @@ export default function OperationalForm({ data, onChange }) {
 
   const getSectionProgress = (section) => {
     const filled = section.fields.filter(hasValue).length
-    return Math.round((filled / section.fields.length) * 100)
+    return { filled, total: section.fields.length, percent: Math.round((filled / section.fields.length) * 100) }
   }
 
   const toggleSection = (sectionId) => {
@@ -55,6 +56,8 @@ export default function OperationalForm({ data, onChange }) {
               const val = e.target.value === '' ? null : parseFloat(e.target.value)
               onChange(field.id, val)
             }}
+            onFocus={() => setFocusedFieldId(field.id)}
+            onBlur={() => setFocusedFieldId(null)}
             placeholder={field.placeholder}
             className="w-full px-4 py-3 pr-14 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
             step="any"
@@ -63,7 +66,10 @@ export default function OperationalForm({ data, onChange }) {
             {field.unit}
           </span>
         </div>
-        {field.benchmarkHint && (
+        {focusedFieldId === field.id && (
+          <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+        )}
+        {field.benchmarkHint && focusedFieldId !== field.id && (
           <p className="text-xs text-blue-500 mt-1 italic">{field.benchmarkHint}</p>
         )}
       </div>
@@ -91,15 +97,15 @@ export default function OperationalForm({ data, onChange }) {
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <span className="text-sm text-navy-500">{section.fields.length} preguntas</span>
+                <span className="text-sm text-navy-500">{progress.filled}/{progress.total} preguntas</span>
                 <div className="flex items-center space-x-2 mt-1">
                   <div className="w-20 h-2 bg-navy-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${progressColor} rounded-full transition-all duration-300`}
-                      style={{ width: `${progress}%` }}
+                      style={{ width: `${progress.percent}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-navy-600">{progress}%</span>
+                  <span className="text-xs font-semibold text-navy-600">{progress.percent}%</span>
                 </div>
               </div>
               <span className={`text-2xl text-navy-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>

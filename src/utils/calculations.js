@@ -22,10 +22,8 @@ const MILLIONS_FIELDS = [
 function ensureFullCOP(data) {
   const result = { ...data }
   MILLIONS_FIELDS.forEach(field => {
-    if (result[field] && result[field] > 0) {
+    if (result[field] !== null && result[field] !== undefined && result[field] > 0) {
       result[field] = result[field] * 1_000_000
-    } else {
-      result[field] = result[field] || 0
     }
   })
   return result
@@ -153,41 +151,41 @@ export function calculateFactors(data) {
     }
   }
 
-  if (unplannedFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0) {
+  if (unplannedFailures !== null && unplannedFailures > 0 && avgStopDuration !== null && avgStopDuration > 0 && costPerHourStop !== null && costPerHourStop > 0) {
     const hoursStopYear = unplannedFailures * avgStopDuration
     factors.f1.baseValue = hoursStopYear * costPerHourStop
     factors.f1.savings = factors.f1.baseValue * reductionFailures
     factors.f1.answered = true
   }
 
-  if (correctiveExternalCost > 0 && correctiveExternalCount > 0) {
+  if (correctiveExternalCost !== null && correctiveExternalCost > 0 && correctiveExternalCount !== null && correctiveExternalCount > 0) {
     factors.f2.baseValue = correctiveExternalCost * correctiveExternalCount
     factors.f2.savings = factors.f2.baseValue * reductionCorrective
     factors.f2.answered = true
   }
 
-  if (reactiveManHours > 0 && manHourCost > 0) {
+  if (reactiveManHours !== null && reactiveManHours > 0 && manHourCost !== null && manHourCost > 0) {
     factors.f3.baseValue = reactiveManHours * 12 * manHourCost
     factors.f3.savings = factors.f3.baseValue * optimizationHH
     factors.f3.answered = true
   }
 
-  if (sparePartsDelay > 0 && costPerHourStop > 0 && unplannedFailures > 0 && avgStopDuration > 0) {
+  if (sparePartsDelay !== null && sparePartsDelay > 0 && costPerHourStop !== null && costPerHourStop > 0 && unplannedFailures !== null && unplannedFailures > 0 && avgStopDuration !== null && avgStopDuration > 0) {
     const delayCost = avgStopDuration * costPerHourStop * unplannedFailures * (sparePartsDelay / 365)
     const inventorySavings = sparePartsInventoryCost * reductionDelays
     factors.f4.baseValue = delayCost + sparePartsInventoryCost
     factors.f4.savings = delayCost * reductionDelays + inventorySavings
     factors.f4.answered = true
-  } else if (sparePartsInventoryCost > 0) {
+  } else if (sparePartsInventoryCost !== null && sparePartsInventoryCost > 0) {
     factors.f4.baseValue = sparePartsInventoryCost
     factors.f4.savings = sparePartsInventoryCost * reductionDelays
     factors.f4.answered = true
   }
 
-  if (scheduledStopHours > 0 && scheduledStopCost > 0) {
+  if (scheduledStopHours !== null && scheduledStopHours > 0 && scheduledStopCost !== null && scheduledStopCost > 0) {
     factors.f5.baseValue = scheduledStopHours * scheduledStopCost
     let f5Savings = factors.f5.baseValue * reductionScheduledStops
-    if (monthlyBilling > 0) {
+    if (monthlyBilling !== null && monthlyBilling > 0) {
       const maxF5Savings = monthlyBilling * 12 * MAX_SCHEDULED_SAVINGS_FRACTION
       f5Savings = Math.min(f5Savings, maxF5Savings)
     }
@@ -195,37 +193,37 @@ export function calculateFactors(data) {
     factors.f5.answered = true
   }
 
-  if (criticalAssets > 0 && avgCriticalAssetValue > 0) {
+  if (criticalAssets !== null && criticalAssets > 0 && avgCriticalAssetValue !== null && avgCriticalAssetValue > 0) {
     const annualDeferral = criticalAssets * avgCriticalAssetValue / 15
     factors.f6.baseValue = annualDeferral
     factors.f6.savings = annualDeferral * extensionLife
     factors.f6.answered = true
   }
 
-  if (totalAssets > 0 && annualEnergyCost > 0) {
+  if (totalAssets !== null && totalAssets > 0 && annualEnergyCost !== null && annualEnergyCost > 0) {
     factors.f7.baseValue = annualEnergyCost
     factors.f7.savings = annualEnergyCost * energySavings
     factors.f7.answered = true
   }
 
-  if (monthlyBilling > 0) {
+  if (monthlyBilling !== null && monthlyBilling > 0) {
     const safetySavingsYear = monthlyBilling * 12 * RISK_COST_FRACTION
     factors.f8.baseValue = safetySavingsYear
     factors.f8.savings = safetySavingsYear * riskReduction
     factors.f8.answered = true
   }
 
-  if (preventiveMaintenanceCost > 0 && unnecessaryPreventivePercentage > 0) {
+  if (preventiveMaintenanceCost !== null && preventiveMaintenanceCost > 0 && unnecessaryPreventivePercentage !== null && unnecessaryPreventivePercentage > 0) {
     factors.f9.baseValue = preventiveMaintenanceCost
     factors.f9.savings = preventiveMaintenanceCost * (unnecessaryPreventivePercentage / 100) * reductionPreventive
     factors.f9.answered = true
-  } else if (preventiveMaintenanceCost > 0) {
+  } else if (preventiveMaintenanceCost !== null && preventiveMaintenanceCost > 0) {
     factors.f9.baseValue = preventiveMaintenanceCost
     factors.f9.savings = preventiveMaintenanceCost * 0.35 * reductionPreventive
     factors.f9.answered = true
   }
 
-  if (inducedFailureCost > 0) {
+  if (inducedFailureCost !== null && inducedFailureCost > 0) {
     factors.f10.baseValue = inducedFailureCost
     factors.f10.savings = inducedFailureCost * eliminationInducedFailures
     factors.f10.answered = true
@@ -430,5 +428,103 @@ export function calculateAll(data) {
     projection,
     monthlySavings: totalSavings / 12,
     manHourCost
+  }
+}
+
+export function calculateAllContratoMarco(data) {
+  const factors = calculateFactors(data)
+  const totalSavings = calculateTotalSavings(factors)
+  const investment = data.investment || 0
+  const annualContractValue = data.annualContractValue || 0
+  const inflationRate = data.inflationRate || 0.04
+  const projectionYears = data.projectionYears || 5
+  const discountRate = data.discountRate || 0.12
+
+  const yearlyPayments = []
+  for (let year = 0; year < projectionYears; year++) {
+    yearlyPayments.push(annualContractValue * Math.pow(1 + inflationRate, year))
+  }
+
+  const yearlySavings = []
+  for (let year = 0; year < projectionYears; year++) {
+    yearlySavings.push(totalSavings)
+  }
+
+  let totalPayments = yearlyPayments.reduce((sum, p) => sum + p, 0)
+  let totalSavingsSum = yearlySavings.reduce((sum, s) => sum + s, 0)
+
+  const yearlyNetFlows = yearlyPayments.map((p, i) => yearlySavings[i] - p)
+
+  let van = 0
+  for (let i = 0; i < projectionYears; i++) {
+    van += yearlyNetFlows[i] / Math.pow(1 + discountRate, i + 1)
+  }
+
+  const tir = calculateTIR(totalSavingsSum - annualContractValue, annualContractValue, projectionYears)
+
+  const roi = totalPayments > 0 ? ((totalSavingsSum - totalPayments) / totalPayments) * 100 : 0
+
+  const payback = calculatePayback(annualContractValue, totalSavings)
+
+  const benefitCostRatio = totalPayments > 0 ? totalSavingsSum / totalPayments : 0
+
+  const projection = []
+  let cumulative = -annualContractValue
+  for (let i = 0; i < projectionYears; i++) {
+    cumulative += yearlyNetFlows[i]
+    projection.push({
+      year: i + 1,
+      annualSavings: yearlyNetFlows[i],
+      cumulative,
+      roi: annualContractValue > 0 ? (cumulative / annualContractValue) * 100 : 0
+    })
+  }
+
+  const certainty = calculateCertainty(factors)
+  const certaintyInfo = getCertaintyLevel(certainty)
+  const missingFields = getMissingFields(factors)
+  const dominantFactors = getDominantFactors(factors, totalSavings)
+
+  let savingsOverCap = false
+  let savingsCapPct = null
+  const monthlyBilling = (data.monthlyBilling && data.monthlyBilling > 0)
+    ? data.monthlyBilling * 1_000_000
+    : 0
+  if (monthlyBilling > 0) {
+    const annualBilling = monthlyBilling * 12
+    const savingsPct = totalSavingsSum / annualBilling
+    if (savingsPct > MAX_SAVINGS_OF_REVENUE) {
+      savingsOverCap = true
+      savingsCapPct = (savingsPct * 100).toFixed(1)
+    }
+  }
+
+  const manHourCost = factors._meta?.manHourCost || 0
+  delete factors._meta
+
+  return {
+    factors,
+    totalSavings: totalSavingsSum,
+    investment: annualContractValue,
+    totalPayments,
+    yearlyPayments,
+    yearlySavings,
+    roi,
+    payback,
+    benefitCostRatio,
+    van,
+    tir,
+    certainty,
+    certaintyInfo,
+    missingFields,
+    dominantFactors,
+    roiWarning: roi > ROI_WARNING_THRESHOLD,
+    roiSeverity: roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null,
+    savingsOverCap,
+    savingsCapPct,
+    projection,
+    monthlySavings: totalSavingsSum / 12,
+    manHourCost,
+    isContratoMarco: true
   }
 }

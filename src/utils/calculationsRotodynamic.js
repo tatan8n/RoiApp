@@ -1,4 +1,4 @@
-import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS } from './constants.js'
+import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES } from './constants.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -10,22 +10,36 @@ const ROI_WARNING_THRESHOLD = 300
 const ROI_DANGER_THRESHOLD = 500
 const DOMINANT_FACTOR_RATIO = 0.50
 
+function getTurbineVENS(turbineType) {
+  const turbine = TURBINE_TYPES.find(t => t.id === turbineType)
+  if (turbine?.benchmarks?.vens) {
+    return turbine.benchmarks.vens
+  }
+  return 5000
+}
+
+function isNewTurbine(data) {
+  return data.yearsOfOperation !== null && data.yearsOfOperation <= 2
+}
+
 export function calculateRotodynamicFactors(data) {
   const {
-    numTurbines = 0,
-    nominalCapacity = 0,
-    costPerHourStop = 0,
-    criticalFailures = 0,
-    avgStopDuration = 0,
-    mttr = 0,
-    externalInterventionCost = 0,
-    reactiveManHours = 0,
-    internalLaborCost = 0,
-    billingAffected = 0,
-    sparePartsDelay = 0,
-    heatRateDesign = 0,
-    heatRateActual = 0,
-    fuelCost = 0,
+    numTurbines,
+    nominalCapacity,
+    costPerHourStop,
+    criticalFailures,
+    avgStopDuration,
+    mttr,
+    externalInterventionCost,
+    reactiveManHours,
+    internalLaborCost,
+    billingAffected,
+    sparePartsDelay,
+    heatRateDesign,
+    heatRateActual,
+    fuelCost,
+    turbineType,
+    currency,
     benchmarks = ROTODYNAMIC_BENCHMARKS
   } = data
 
@@ -83,14 +97,27 @@ export function calculateRotodynamicFactors(data) {
     }
   }
 
-  if (criticalFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0) {
+  const hasActualFailureData = criticalFailures !== null && avgStopDuration !== null && costPerHourStop !== null
+  const hasCapacityData = nominalCapacity !== null
+
+  if (isNewTurbine(data)) {
+    const vens = getTurbineVENS(turbineType)
+    const vensCOP = data.currency === 'USD' ? vens * 4000 : vens * 20000000
+
+    if (hasCapacityData && vensCOP > 0) {
+      const estimatedAnnualLoss = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS * 0.05 * vensCOP * 0.001
+      factors.f1.baseValue = estimatedAnnualLoss
+      factors.f1.savings = factors.f1.baseValue * reductionFailures
+      factors.f1.answered = true
+    }
+  } else if (hasActualFailureData && criticalFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0) {
     const hoursStopYear = (criticalFailures / 2) * avgStopDuration
     factors.f1.baseValue = hoursStopYear * costPerHourStop
     factors.f1.savings = factors.f1.baseValue * reductionFailures
     factors.f1.answered = true
   }
 
-  if (nominalCapacity > 0 && heatRateDesign > 0 && heatRateActual > 0 && fuelCost > 0) {
+  if (nominalCapacity !== null && heatRateDesign !== null && heatRateActual !== null && fuelCost !== null) {
     if (heatRateActual > heatRateDesign) {
       const deltaHeatRate = heatRateActual - heatRateDesign
       const capacityKWh = nominalCapacity * 1000
@@ -102,20 +129,22 @@ export function calculateRotodynamicFactors(data) {
     }
   }
 
-  if (reactiveManHours > 0 && internalLaborCost > 0) {
+  if (reactiveManHours !== null && internalLaborCost !== null && reactiveManHours > 0 && internalLaborCost > 0) {
     factors.f3.baseValue = reactiveManHours * internalLaborCost
     factors.f3.savings = factors.f3.baseValue * optimizationHH
     factors.f3.answered = true
   }
 
-  if (sparePartsDelay > 0 && costPerHourStop > 0 && criticalFailures > 0 && avgStopDuration > 0) {
-    const delayCost = (criticalFailures / 2) * avgStopDuration * costPerHourStop * (sparePartsDelay / 365)
-    factors.f4.baseValue = delayCost
-    factors.f4.savings = delayCost * reductionDelays
-    factors.f4.answered = true
+  if (sparePartsDelay !== null && costPerHourStop !== null && criticalFailures !== null && avgStopDuration !== null) {
+    if (sparePartsDelay > 0 && costPerHourStop > 0 && criticalFailures > 0 && avgStopDuration > 0) {
+      const delayCost = (criticalFailures / 2) * avgStopDuration * costPerHourStop * (sparePartsDelay / 365)
+      factors.f4.baseValue = delayCost
+      factors.f4.savings = delayCost * reductionDelays
+      factors.f4.answered = true
+    }
   }
 
-  if (numTurbines > 0 && nominalCapacity > 0) {
+  if (numTurbines !== null && nominalCapacity !== null && numTurbines > 0 && nominalCapacity > 0) {
     const assetValue = numTurbines * nominalCapacity * 1_000_000
     const annualDeferral = assetValue / 15
     factors.f5.baseValue = annualDeferral
@@ -123,12 +152,12 @@ export function calculateRotodynamicFactors(data) {
     factors.f5.answered = true
   }
 
-  if (billingAffected > 0) {
+  if (billingAffected !== null && billingAffected > 0) {
     const safetySavingsYear = billingAffected * RISK_COST_FRACTION
     factors.f6.baseValue = safetySavingsYear
     factors.f6.savings = safetySavingsYear * riskReduction
     factors.f6.answered = true
-  } else if (nominalCapacity > 0) {
+  } else if (hasCapacityData && nominalCapacity > 0) {
     const estimatedBilling = nominalCapacity * 1000 * 24 * 365 * 0.05
     const safetySavingsYear = estimatedBilling * RISK_COST_FRACTION
     factors.f6.baseValue = safetySavingsYear
@@ -146,18 +175,18 @@ export function calculateRotodynamicTotalSavings(factors) {
 }
 
 export function calculateRotodynamicROI(investment, annualSavings) {
-  if (investment <= 0 || annualSavings <= 0) return 0
+  if (!investment || investment <= 0 || !annualSavings || annualSavings <= 0) return 0
   return ((annualSavings - investment) / investment) * 100
 }
 
 export function calculateRotodynamicPayback(investment, annualSavings) {
-  if (annualSavings <= 0) return null
+  if (!annualSavings || annualSavings <= 0) return null
   const paybackMonths = investment / (annualSavings / 12)
   return Math.round(paybackMonths * 10) / 10
 }
 
 export function calculateRotodynamicBenefitCostRatio(investment, annualSavings) {
-  if (investment <= 0) return 0
+  if (!investment || investment <= 0) return 0
   return annualSavings / investment
 }
 
