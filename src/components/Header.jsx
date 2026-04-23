@@ -1,27 +1,28 @@
 import React from 'react'
 import { COLORS } from '../utils/constants'
 
-export default function Header({ logoPath = '/logos/Logo A-MAQ (1)-02.png' }) {
+export default function Header({ logoPath = 'Logo A-MAQ (1)_Mesa de trabajo 1.png' }) {
   return (
-    <header className="bg-navy-900 text-white py-4 px-6 shadow-lg">
+    <header className="bg-white border-b-4 border-navy-900 py-3 px-6 shadow-md">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center gap-4">
-          <img 
-            src={logoPath} 
-            alt="A-MAQ Logo" 
-            className="h-12 w-auto"
+        <div className="flex items-center gap-5">
+          <img
+            src={logoPath}
+            alt="A-MAQ Logo"
+            className="h-16 w-auto"
+            style={{ filter: 'brightness(0) contrast(1.2)' }}
             onError={(e) => {
               e.target.style.display = 'none'
             }}
           />
           <div>
-            <h1 className="text-xl font-bold">Calculadora ROI</h1>
-            <p className="text-navy-200 text-sm">Colectores de Vibración para Mantenimiento Predictivo</p>
+            <h1 className="text-2xl font-black text-navy-900 tracking-tight" style={{ fontFamily: 'Montserrat, sans-serif' }}>A-MAQ</h1>
+            <p className="text-navy-400 text-xs font-medium">Mantenimiento Predictivo y Análisis de Vibración</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold">A-MAQ S.A.</p>
-          <p className="text-navy-300 text-xs">Mantenimiento Predictivo y Análisis de Vibración</p>
+          <p className="text-sm font-bold text-navy-800">A-MAQ S.A.</p>
+          <p className="text-navy-400 text-xs">Colectores de Vibración</p>
         </div>
       </div>
     </header>

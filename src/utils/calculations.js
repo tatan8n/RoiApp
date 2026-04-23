@@ -1,23 +1,71 @@
 import { DEFAULT_BENCHMARKS } from './constants.js'
 
+const PRESTACIONAL_FACTOR = 1.75
+const MONTHLY_WORKING_HOURS = 240
+const RISK_COST_FRACTION = 0.02
+const MAX_SCHEDULED_SAVINGS_FRACTION = 0.05
+const MAX_SAVINGS_OF_REVENUE = 0.15
+
+const MILLIONS_FIELDS = [
+  'costPerHourStop',
+  'correctiveExternalCost',
+  'sparePartsInventoryCost',
+  'scheduledStopCost',
+  'monthlyBilling',
+  'preventiveMaintenanceCost',
+  'inducedFailureCost',
+  'technicianMonthlySalary',
+  'annualEnergyCost',
+  'avgCriticalAssetValue'
+]
+
+function ensureFullCOP(data) {
+  const result = { ...data }
+  MILLIONS_FIELDS.forEach(field => {
+    if (result[field] && result[field] > 0) {
+      result[field] = result[field] * 1_000_000
+    } else {
+      result[field] = result[field] || 0
+    }
+  })
+  return result
+}
+
+export function calculateManHourCost(technicianMonthlySalaryMM) {
+  if (!technicianMonthlySalaryMM || technicianMonthlySalaryMM <= 0) return 0
+  const salaryFullCOP = technicianMonthlySalaryMM * 1_000_000
+  return (salaryFullCOP * PRESTACIONAL_FACTOR) / MONTHLY_WORKING_HOURS
+}
+
 export function calculateFactors(data) {
+  const convertedData = ensureFullCOP(data)
+
+  let manHourCost = convertedData.manHourCost || 0
+  if (!manHourCost && convertedData.technicianMonthlySalary > 0) {
+    manHourCost = (convertedData.technicianMonthlySalary * PRESTACIONAL_FACTOR) / MONTHLY_WORKING_HOURS
+  }
+
   const {
     totalAssets = 0,
     criticalAssets = 0,
+    avgCriticalAssetValue = 0,
     costPerHourStop = 0,
     unplannedFailures = 0,
     avgStopDuration = 0,
     correctiveExternalCost = 0,
     correctiveExternalCount = 0,
     reactiveManHours = 0,
-    manHourCost = 0,
     sparePartsDelay = 0,
     sparePartsInventoryCost = 0,
     scheduledStopHours = 0,
     scheduledStopCost = 0,
     monthlyBilling = 0,
+    preventiveMaintenanceCost = 0,
+    unnecessaryPreventivePercentage = 0,
+    inducedFailureCost = 0,
+    annualEnergyCost = 0,
     benchmarks = DEFAULT_BENCHMARKS
-  } = data
+  } = convertedData
 
   const {
     reductionFailures = DEFAULT_BENCHMARKS.reductionFailures,
@@ -27,7 +75,9 @@ export function calculateFactors(data) {
     reductionScheduledStops = DEFAULT_BENCHMARKS.reductionScheduledStops,
     extensionLife = DEFAULT_BENCHMARKS.extensionLife,
     energySavings = DEFAULT_BENCHMARKS.energySavings,
-    riskReduction = DEFAULT_BENCHMARKS.riskReduction
+    riskReduction = DEFAULT_BENCHMARKS.riskReduction,
+    reductionPreventive = DEFAULT_BENCHMARKS.reductionPreventive,
+    eliminationInducedFailures = DEFAULT_BENCHMARKS.eliminationInducedFailures
   } = benchmarks
 
   const factors = {
@@ -47,7 +97,7 @@ export function calculateFactors(data) {
     },
     f3: {
       name: 'Optimización HH Reactivo',
-      description: 'Reducción de horas-hombre en mantenimiento reactivo',
+      description: 'Reducción de horas-hombre en mantenimiento reactivo (calculado desde salario técnico × factor prestacional 1.75 / 240h)',
       baseValue: 0,
       savings: 0,
       answered: false
@@ -68,14 +118,14 @@ export function calculateFactors(data) {
     },
     f6: {
       name: 'Vida Útil Diferida',
-      description: 'Diferimiento de reposición de activos',
+      description: 'Diferimiento de reposición de activos (requiere valor de reposición)',
       baseValue: 0,
       savings: 0,
       answered: false
     },
     f7: {
       name: 'Ahorro Energético',
-      description: 'Reducción de consumo por optimización',
+      description: 'Reducción de consumo por alineación y balanceo (requiere costo anual de energía)',
       baseValue: 0,
       savings: 0,
       answered: false
@@ -83,6 +133,20 @@ export function calculateFactors(data) {
     f8: {
       name: 'Seguridad y Seguros',
       description: 'Reducción de riesgos y primas de seguro',
+      baseValue: 0,
+      savings: 0,
+      answered: false
+    },
+    f9: {
+      name: 'Preventivos Innecesarios Evitados',
+      description: 'Ahorro al eliminar mantenimientos preventivos intrusivos innecesarios',
+      baseValue: 0,
+      savings: 0,
+      answered: false
+    },
+    f10: {
+      name: 'Fallas Inducidas Evitadas',
+      description: 'Eliminación del riesgo de fallas por error humano post-intervención',
       baseValue: 0,
       savings: 0,
       answered: false
@@ -108,40 +172,66 @@ export function calculateFactors(data) {
     factors.f3.answered = true
   }
 
-  if ((sparePartsDelay > 0 || sparePartsInventoryCost > 0) && costPerHourStop > 0 && unplannedFailures > 0) {
-    const delayCost = sparePartsDelay * 8 * costPerHourStop * unplannedFailures * 0.3
+  if (sparePartsDelay > 0 && costPerHourStop > 0 && unplannedFailures > 0 && avgStopDuration > 0) {
+    const delayCost = avgStopDuration * costPerHourStop * unplannedFailures * (sparePartsDelay / 365)
     const inventorySavings = sparePartsInventoryCost * reductionDelays
     factors.f4.baseValue = delayCost + sparePartsInventoryCost
     factors.f4.savings = delayCost * reductionDelays + inventorySavings
+    factors.f4.answered = true
+  } else if (sparePartsInventoryCost > 0) {
+    factors.f4.baseValue = sparePartsInventoryCost
+    factors.f4.savings = sparePartsInventoryCost * reductionDelays
     factors.f4.answered = true
   }
 
   if (scheduledStopHours > 0 && scheduledStopCost > 0) {
     factors.f5.baseValue = scheduledStopHours * scheduledStopCost
-    factors.f5.savings = factors.f5.baseValue * reductionScheduledStops
+    let f5Savings = factors.f5.baseValue * reductionScheduledStops
+    if (monthlyBilling > 0) {
+      const maxF5Savings = monthlyBilling * 12 * MAX_SCHEDULED_SAVINGS_FRACTION
+      f5Savings = Math.min(f5Savings, maxF5Savings)
+    }
+    factors.f5.savings = f5Savings
     factors.f5.answered = true
   }
 
-  if (criticalAssets > 0) {
-    const annualDeferral = criticalAssets * 50000000 / 15
+  if (criticalAssets > 0 && avgCriticalAssetValue > 0) {
+    const annualDeferral = criticalAssets * avgCriticalAssetValue / 15
     factors.f6.baseValue = annualDeferral
     factors.f6.savings = annualDeferral * extensionLife
     factors.f6.answered = true
   }
 
-  if (totalAssets > 0) {
-    const energySavingsYear = totalAssets * 50 * 0.746 * 6000 * 500
-    factors.f7.baseValue = energySavingsYear
-    factors.f7.savings = energySavingsYear * energySavings
+  if (totalAssets > 0 && annualEnergyCost > 0) {
+    factors.f7.baseValue = annualEnergyCost
+    factors.f7.savings = annualEnergyCost * energySavings
     factors.f7.answered = true
   }
 
   if (monthlyBilling > 0) {
-    const safetySavingsYear = monthlyBilling * 12 * 0.02
+    const safetySavingsYear = monthlyBilling * 12 * RISK_COST_FRACTION
     factors.f8.baseValue = safetySavingsYear
     factors.f8.savings = safetySavingsYear * riskReduction
     factors.f8.answered = true
   }
+
+  if (preventiveMaintenanceCost > 0 && unnecessaryPreventivePercentage > 0) {
+    factors.f9.baseValue = preventiveMaintenanceCost
+    factors.f9.savings = preventiveMaintenanceCost * (unnecessaryPreventivePercentage / 100) * reductionPreventive
+    factors.f9.answered = true
+  } else if (preventiveMaintenanceCost > 0) {
+    factors.f9.baseValue = preventiveMaintenanceCost
+    factors.f9.savings = preventiveMaintenanceCost * 0.35 * reductionPreventive
+    factors.f9.answered = true
+  }
+
+  if (inducedFailureCost > 0) {
+    factors.f10.baseValue = inducedFailureCost
+    factors.f10.savings = inducedFailureCost * eliminationInducedFailures
+    factors.f10.answered = true
+  }
+
+  factors._meta = { manHourCost }
 
   return factors
 }
@@ -202,16 +292,34 @@ export function calculateTIR(annualSavings, investment, years, guess = 0.1) {
   return rate * 100
 }
 
+export const ROI_WARNING_THRESHOLD = 300
+export const ROI_DANGER_THRESHOLD = 500
+export const DOMINANT_FACTOR_RATIO = 0.50
+
+export function getDominantFactors(factors, totalSavings) {
+  if (!totalSavings || totalSavings <= 0) return []
+  return Object.entries(factors)
+    .filter(([_, f]) => f.answered && f.savings > 0)
+    .filter(([_, f]) => (f.savings / totalSavings) > DOMINANT_FACTOR_RATIO)
+    .map(([key, f]) => ({
+      key,
+      name: f.name,
+      ratio: (f.savings / totalSavings * 100).toFixed(0)
+    }))
+}
+
 export function calculateCertainty(factors) {
   const weights = {
-    f1: 15,
-    f2: 10,
-    f3: 8,
+    f1: 12,
+    f2: 9,
+    f3: 7,
     f4: 6,
     f5: 5,
     f6: 5,
     f7: 4,
-    f8: 4
+    f8: 4,
+    f9: 8,
+    f10: 10
   }
 
   let totalWeight = 0
@@ -276,9 +384,29 @@ export function calculateAll(data) {
   const van = calculateVAN(totalSavings, investment, discountRate, projectionYears)
   const tir = calculateTIR(totalSavings, investment, projectionYears)
 
+  const manHourCost = factors._meta?.manHourCost || 0
+  delete factors._meta
+
   const certainty = calculateCertainty(factors)
   const certaintyInfo = getCertaintyLevel(certainty)
   const missingFields = getMissingFields(factors)
+  const dominantFactors = getDominantFactors(factors, totalSavings)
+  const roiWarning = roi > ROI_WARNING_THRESHOLD
+  const roiSeverity = roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null
+
+  let savingsOverCap = false
+  let savingsCapPct = null
+  const monthlyBillingFull = (data.monthlyBilling && data.monthlyBilling > 0)
+    ? data.monthlyBilling * 1_000_000
+    : 0
+  if (monthlyBillingFull > 0) {
+    const annualBilling = monthlyBillingFull * 12
+    const savingsPct = totalSavings / annualBilling
+    if (savingsPct > MAX_SAVINGS_OF_REVENUE) {
+      savingsOverCap = true
+      savingsCapPct = (savingsPct * 100).toFixed(1)
+    }
+  }
 
   const projection = generateProjection(totalSavings, investment, projectionYears)
 
@@ -294,7 +422,13 @@ export function calculateAll(data) {
     certainty,
     certaintyInfo,
     missingFields,
+    dominantFactors,
+    roiWarning,
+    roiSeverity,
+    savingsOverCap,
+    savingsCapPct,
     projection,
-    monthlySavings: totalSavings / 12
+    monthlySavings: totalSavings / 12,
+    manHourCost
   }
 }

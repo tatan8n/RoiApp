@@ -41,7 +41,9 @@ export const DEFAULT_BENCHMARKS = {
   reductionScheduledStops: 0.20,
   extensionLife: 0.25,
   energySavings: 0.05,
-  riskReduction: 0.10
+  riskReduction: 0.10,
+  reductionPreventive: 0.30,
+  eliminationInducedFailures: 0.70
 }
 
 export const DEFAULT_FINANCIAL_PARAMS = {
@@ -60,21 +62,64 @@ export const SECTORS = [
   'Otro'
 ]
 
+export const OPERATIONAL_SECTIONS = [
+  {
+    id: 'equipment',
+    title: 'Equipos',
+    icon: '🔧',
+    description: 'Cantidad de equipos en tu planta',
+    fields: ['totalAssets', 'criticalAssets']
+  },
+  {
+    id: 'unplannedStops',
+    title: 'Paros No Planificados',
+    icon: '⚠️',
+    description: 'Pérdidas por fallas inesperadas',
+    fields: ['costPerHourStop', 'unplannedFailures', 'avgStopDuration']
+  },
+  {
+    id: 'corrective',
+    title: 'Mantenimiento Correctivo',
+    icon: '🔨',
+    description: 'Costos de servicios técnicos externos',
+    fields: ['correctiveExternalCost', 'correctiveExternalCount']
+  },
+  {
+    id: 'reactive',
+    title: 'Mantenimiento Reactivo',
+    icon: '⏱️',
+    description: 'Horas-hombre del equipo interno',
+    fields: ['reactiveManHours', 'technicianMonthlySalary']
+  },
+  {
+    id: 'inventoryScheduled',
+    title: 'Repuestos, Programados y Energía',
+    icon: '📦',
+    description: 'Inventario, demoras, mantenimientos preventivos y energía',
+    fields: ['sparePartsDelay', 'sparePartsInventoryCost', 'scheduledStopHours', 'scheduledStopCost', 'monthlyBilling', 'preventiveMaintenanceCost', 'unnecessaryPreventivePercentage', 'inducedFailureCost', 'annualEnergyCost']
+  }
+]
+
 export const OPERATIONAL_FIELDS = [
-  { id: 'totalAssets', label: 'Número total de activos (equipos rotativos) en la planta', weight: 5, unit: 'equipos', placeholder: 'Motores, bombas, ventiladores, turbinas, etc.' },
-  { id: 'criticalAssets', label: 'Cantidad de activos CRÍTICOS (su falla detiene producción)', weight: 8, unit: 'equipos', placeholder: 'Solo aquellos cuya falla genera paro de línea/planta' },
-  { id: 'costPerHourStop', label: 'Costo promedio por hora de paro por activo crítico', weight: 15, unit: 'COP/hora', placeholder: 'Incluye lucro cesante + producción perdida' },
-  { id: 'unplannedFailures', label: 'Frecuencia actual de fallas no planificadas', weight: 10, unit: 'paros/año', placeholder: 'Promedio de eventos de paro no programado al año' },
-  { id: 'avgStopDuration', label: 'Duración promedio de cada paro no planificado', weight: 7, unit: 'horas', placeholder: 'Tiempo desde falla hasta restablecimiento completo' },
-  { id: 'correctiveExternalCost', label: 'Costo promedio de intervención correctiva externa', weight: 6, unit: 'COP', placeholder: 'Contratación de servicio técnico externo por evento' },
-  { id: 'correctiveExternalCount', label: 'Número de intervenciones correctivas externas al año', weight: 5, unit: 'intervenciones/año', placeholder: 'Cantidad de veces que se contrata servicio externo' },
-  { id: 'reactiveManHours', label: 'Horas-hombre mensuales en mantenimiento reactivo', weight: 5, unit: 'horas/mes', placeholder: 'Horas del equipo interno dedicadas a reparar fallas' },
-  { id: 'manHourCost', label: 'Costo hora-hombre del personal de mantenimiento', weight: 4, unit: 'COP/hora', placeholder: 'Incluye prestaciones y carga laboral' },
-  { id: 'sparePartsDelay', label: 'Días promedio de demora en obtención de repuestos críticos', weight: 3, unit: 'días', placeholder: 'Tiempo de espera desde pedido hasta recepción' },
-  { id: 'sparePartsInventoryCost', label: 'Costo promedio del inventario de repuestos críticos', weight: 3, unit: 'COP/año', placeholder: 'Valor del stock de partes de repuesto mantenido' },
-  { id: 'scheduledStopHours', label: 'Horas de paro programado anuales (mantenimiento preventivo)', weight: 4, unit: 'horas/año', placeholder: 'Ventanas de mantenimiento que afectan producción' },
-  { id: 'scheduledStopCost', label: 'Costo de producción perdida por hora de paro programado', weight: 4, unit: 'COP/hora', placeholder: 'Valor de producción no realizada por mantenimiento' },
-  { id: 'monthlyBilling', label: 'Facturación mensual de la planta', weight: 6, unit: 'COP/mes', placeholder: 'Ingreso mensual aproximado para referencia' }
+  { id: 'totalAssets', label: 'Número total de equipos rotativos', unit: 'equipos', placeholder: 'Motores, bombas, ventiladores, turbinas', benchmarkHint: 'Típico: 50-500 equipos según tamaño de planta' },
+  { id: 'criticalAssets', label: 'Equipos críticos (falla detiene producción)', unit: 'equipos', placeholder: 'Solo equipos cuya falla para línea/planta', benchmarkHint: 'Generalmente 5-15% del total de equipos' },
+  { id: 'avgCriticalAssetValue', label: 'Valor promedio de reposición de un equipo crítico', unit: 'MM COP', placeholder: 'Ej: 50 (si cuesta 50 millones reemplazar uno)', isCurrency: true, benchmarkHint: 'Industria: 50-500 MM COP según tipo de equipo. Fuente: SMRP' },
+  { id: 'costPerHourStop', label: 'Costo por hora de paro no planificado', unit: 'MM COP/hora', placeholder: 'Ej: 5 (si son 5 millones por hora)', isCurrency: true, benchmarkHint: 'Manufactura: 2-10 MM COP/h; Oil & Gas: 50-200 MM COP/h. Fuente: Aberdeen Group' },
+  { id: 'unplannedFailures', label: 'Frecuencia de fallas no planificadas', unit: 'paros/año', placeholder: 'Promedio de eventos al año', benchmarkHint: 'Plantas sin predictivo: 3-5 fallas/año por cada 100 equipos. Fuente: DOE, SMRP' },
+  { id: 'avgStopDuration', label: 'Duración promedio de cada paro', unit: 'horas', placeholder: 'Tiempo desde falla hasta restablecimiento', benchmarkHint: 'Típico: 2-8 horas según tipo de falla. Fuente: McKinsey' },
+  { id: 'correctiveExternalCost', label: 'Costo promedio por intervención correctiva externa', unit: 'MM COP', placeholder: 'Ej: 3 (si son 3 millones por intervención)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del presupuesto anual de mantenimiento. Fuente: SMRP' },
+  { id: 'correctiveExternalCount', label: 'Número de intervenciones correctivas externas al año', unit: 'intervenciones/año', placeholder: 'Cantidad de veces que se contrata servicio externo', benchmarkHint: 'Plantas sin predictivo: 5-15 intervenciones/año. Fuente: PwC' },
+  { id: 'reactiveManHours', label: 'Horas-hombre mensuales en mantenimiento reactivo', unit: 'horas/mes', placeholder: 'Horas del equipo interno en reparar fallas', benchmarkHint: 'Plantas reactivas: 20-40% del tiempo de mantenimiento. Fuente: McKinsey' },
+  { id: 'technicianMonthlySalary', label: 'Salario mensual básico de un técnico de mantenimiento', unit: 'MM COP/mes', placeholder: 'Ej: 2 (si gana 2 millones de pesos mensuales)', isCurrency: true, benchmarkHint: 'Colombia: 1.5-4 MM COP/mes según región y nivel. Fuente: DANE' },
+  { id: 'sparePartsDelay', label: 'Días promedio de demora en repuestos críticos', unit: 'días', placeholder: 'Tiempo desde pedido hasta recepción', benchmarkHint: 'Sin gestión: 45-90 días; Con predictivo: 7-30 días. Fuente: SMRP, Aberdeen' },
+  { id: 'sparePartsInventoryCost', label: 'Costo del inventario de repuestos críticos', unit: 'MM COP', placeholder: 'Ej: 50 (si son 50 millones en repuestos)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del valor total de reposición de activos. Fuente: SMRP, DOE' },
+  { id: 'scheduledStopHours', label: 'Horas de paro programado anuales', unit: 'horas/año', placeholder: 'Ventanas de mantenimiento preventivo', benchmarkHint: 'Típico: 200-600 horas/año. Fuente: DOE FEMP' },
+  { id: 'scheduledStopCost', label: 'Costo por hora de paro programado', unit: 'MM COP/hora', placeholder: 'Ej: 3 (si son 3 millones por hora)', isCurrency: true, benchmarkHint: 'Similar al costo por hora de paro no planificado. Fuente: McKinsey' },
+  { id: 'monthlyBilling', label: 'Facturación mensual aproximada', unit: 'MM COP/mes', placeholder: 'Ej: 1000 (si son mil millones mensuales)', isCurrency: true, benchmarkHint: 'Ingreso mensual de la planta. Se usa para estimar costo de riesgo (~2% anual). Fuente: PwC, DOE' },
+  { id: 'preventiveMaintenanceCost', label: 'Costo anual de mantenimiento preventivo intrusivo', unit: 'MM COP/año', placeholder: 'Ej: 200 (si son 200 millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 2-6% del valor de reposición de activos por año. Fuente: SMRP, PwC' },
+  { id: 'unnecessaryPreventivePercentage', label: '% de preventivos abiertos que están en buen estado', unit: '%', placeholder: 'Estimación técnica: 30-40% en plantas no optimizadas', benchmarkHint: 'Sin predictivo: 30-40%; Con predictivo: 10-15%. Fuente: DOE, McKinsey' },
+  { id: 'inducedFailureCost', label: 'Costo anual de fallas inducidas por error humano', unit: 'MM COP/año', placeholder: 'Ej: 50 (si son 50 millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 5-15% del costo total de mantenimiento. Fuente: SMRP' },
+  { id: 'annualEnergyCost', label: 'Costo anual de energía eléctrica de la planta', unit: 'MM COP/año', placeholder: 'Ej: 500 (si son 500 millones en energía al año)', isCurrency: true, benchmarkHint: 'Manufactura ligera: 3-8% de facturación; Intensiva: 15-40%. Fuente: DOE Motor Challenge' }
 ]
 
 export const BENCHMARK_FIELDS = [
@@ -85,7 +130,9 @@ export const BENCHMARK_FIELDS = [
   { id: 'reductionScheduledStops', label: '% Reducción de paros programados (mejor planificación)', weight: 5, default: 0.20, benchmark: '15-25% (Metrix, Farnell)' },
   { id: 'extensionLife', label: '% Extensión de vida útil de activos', weight: 5, default: 0.25, benchmark: '20-40% (McKinsey)' },
   { id: 'energySavings', label: '% Ahorro en consumo energético por alineación/balanceo', weight: 3, default: 0.05, benchmark: '5-8% (Vista Projects)' },
-  { id: 'riskReduction', label: '% Reducción de riesgos de seguridad / primas de seguro', weight: 3, default: 0.10, benchmark: '5-15% (OPMaint, PWC)' }
+  { id: 'riskReduction', label: '% Reducción de riesgos de seguridad / primas de seguro', weight: 3, default: 0.10, benchmark: '5-15% (OPMaint, PWC)' },
+  { id: 'reductionPreventive', label: '% Reducción de preventivos innecesarios mediante predictivo', weight: 6, default: 0.30, benchmark: '25-40% (DOE, McKinsey)' },
+  { id: 'eliminationInducedFailures', label: '% Reducción de fallas inducidas por error humano', weight: 7, default: 0.70, benchmark: '50-80% (SMRP, DOE)' }
 ]
 
 export const STEPS_CONFIG = [

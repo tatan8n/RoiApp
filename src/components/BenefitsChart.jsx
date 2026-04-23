@@ -33,7 +33,7 @@ export default function BenefitsChart({ factors = {} }) {
     )
   }
 
-  const formatTooltip = (value) => `$${value}M COP`
+  const formatTooltip = (value) => `$${value} MM COP`
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -48,7 +48,7 @@ export default function BenefitsChart({ factors = {} }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis 
               type="number" 
-              tickFormatter={(v) => `$${v}M`}
+              tickFormatter={(v) => `$${v} MM`}
               tick={{ fontSize: 12, fill: '#6B7280' }}
             />
             <YAxis 

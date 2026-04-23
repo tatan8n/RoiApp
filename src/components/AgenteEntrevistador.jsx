@@ -96,7 +96,7 @@ export default function AgenteEntrevistador({ onComplete, initialData }) {
       correctiveExternalCost: (answers.correctiveExternal || 0) / 3,
       correctiveExternalCount: 3,
       reactiveManHours: (answers.reactiveHours || 0) / (12 * (answers.reactiveHours || 1)),
-      manHourCost: 50000,
+      technicianMonthlySalary: 2,
       sparePartsDelay: parseInt(answers.spareDelay) || 0,
       sparePartsInventoryCost: answers.inventoryCost || 0,
       scheduledStopHours: answers.scheduledStops || 0,

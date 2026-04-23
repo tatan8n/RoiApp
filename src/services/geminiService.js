@@ -1,42 +1,79 @@
 const GEMINI_API_KEY = 'AIzaSyDKgdiqnzvcFOI_g9_OHWIPgxc5pympkV4'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
 
-export async function generateAgentResponse(prompt, conversationHistory = []) {
-  try {
-    const contents = conversationHistory.map(msg => ({
-      role: msg.role,
-      parts: [{ text: msg.content }]
-    }))
+export async function generateAgentResponse(prompt, conversationHistory = [], retries = 4, baseDelay = 2000) {
+  let lastError = null
+  
+  await new Promise(resolve => setTimeout(resolve, baseDelay))
 
-    contents.push({
-      role: 'user',
-      parts: [{ text: prompt }]
-    })
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const contents = conversationHistory.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.content }]
+      }))
 
-    const response = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500
-        }
+      contents.push({
+        role: 'user',
+        parts: [{ text: prompt }]
       })
-    })
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`)
+      const response = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`API Error (attempt ${attempt + 1}):`, response.status, errorText)
+        lastError = new Error(`API Error: ${response.status}`)
+        
+        if (attempt < retries - 1) {
+          const delay = baseDelay * Math.pow(2, attempt + 1)
+          console.log(`Waiting ${delay}ms before retry...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+        throw lastError
+      }
+
+      const data = await response.json()
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      
+      if (!text || text.trim() === '') {
+        console.warn(`Empty response (attempt ${attempt + 1})`)
+        lastError = new Error('Empty response from API')
+        
+        if (attempt < retries - 1) {
+          const delay = baseDelay * Math.pow(2, attempt + 1)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+        throw lastError
+      }
+
+      return text
+    } catch (error) {
+      console.error(`Gemini API Error (attempt ${attempt + 1}):`, error)
+      lastError = error
+      
+      if (attempt < retries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt + 1)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
     }
-
-    const data = await response.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  } catch (error) {
-    console.error('Gemini API Error:', error)
-    return 'Lo siento, tuve un problema al procesar tu respuesta. ¿Podrías intentarlo de nuevo?'
   }
+
+  return `Lo siento, tuve un problema al procesar tu respuesta. ¿Podrías intentarlo de nuevo?`
 }
 
 export const INTERVIEW_PROMPTS = {

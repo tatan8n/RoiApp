@@ -19,18 +19,23 @@ const initialFormData = {
   operational: {
     totalAssets: null,
     criticalAssets: null,
+    avgCriticalAssetValue: null,
     costPerHourStop: null,
     unplannedFailures: null,
     avgStopDuration: null,
     correctiveExternalCost: null,
     correctiveExternalCount: null,
     reactiveManHours: null,
-    manHourCost: null,
+    technicianMonthlySalary: null,
     sparePartsDelay: null,
     sparePartsInventoryCost: null,
     scheduledStopHours: null,
     scheduledStopCost: null,
-    monthlyBilling: null
+    monthlyBilling: null,
+    preventiveMaintenanceCost: null,
+    unnecessaryPreventivePercentage: null,
+    inducedFailureCost: null,
+    annualEnergyCost: null
   },
   benchmarks: { ...DEFAULT_BENCHMARKS },
   financial: { ...DEFAULT_FINANCIAL_PARAMS },
@@ -119,7 +124,7 @@ export function useFormData() {
 
   const getInvestment = useCallback(() => {
     if (formData.equipment.customPrice && formData.equipment.customPrice > 0) {
-      return formData.equipment.customPrice
+      return formData.equipment.customPrice * 1_000_000
     }
     const model = EQUIPMENT_MODELS.find(m => m.id === formData.equipment.modelId)
     return model ? model.price : 0

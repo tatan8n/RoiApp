@@ -9,10 +9,10 @@ import BenchmarkForm from '../components/BenchmarkForm'
 import FinancialForm from '../components/FinancialForm'
 import NavigationButtons from '../components/NavigationButtons'
 import ResultsDashboard from './ResultsDashboard'
-import AgenteEntrevistador from '../components/AgenteEntrevistador'
 import ServicePlaceholder from '../components/ServicePlaceholder'
 import { calculateAll } from '../utils/calculations'
 import { downloadPDF } from '../utils/pdfGenerator'
+import { downloadHTML } from '../utils/htmlExporter'
 
 export default function FormWizard({ formData, currentStep, updateClient, updateEquipment, updateOperational, updateBenchmarks, updateFinancial, nextStep, prevStep, getCompleteData, getInvestment }) {
   const [results, setResults] = React.useState(null)
@@ -36,11 +36,11 @@ export default function FormWizard({ formData, currentStep, updateClient, update
     downloadPDF(formData, results)
   }
 
-  const handleInterviewComplete = (interviewData) => {
-    Object.entries(interviewData).forEach(([key, value]) => {
-      updateOperational(key, value)
-    })
-    nextStep()
+  const handleExportHTML = () => {
+    const companyName = formData.client?.companyName || 'cliente'
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `reporte_roi_${companyName.replace(/\s+/g, '_')}_${date}.html`
+    downloadHTML(formData, results, filename)
   }
 
   const handleNext = () => {
@@ -64,6 +64,7 @@ export default function FormWizard({ formData, currentStep, updateClient, update
         results={results}
         onBack={handleBackToForm}
         onExportPDF={handleExportPDF}
+        onExportHTML={handleExportHTML}
       />
     )
   }
@@ -98,7 +99,7 @@ export default function FormWizard({ formData, currentStep, updateClient, update
           )}
 
           {currentStep === 2 && isProduct && (
-            <AgenteEntrevistador onComplete={handleInterviewComplete} />
+            <OperationalForm data={formData.operational} onChange={updateOperational} />
           )}
 
           {currentStep === 2 && isService && (

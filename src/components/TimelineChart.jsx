@@ -27,13 +27,15 @@ export default function TimelineChart({ projection = [], investment = 0 }) {
   const range = maxValue - minValue
 
   const formatValue = (value) => {
-    if (Math.abs(value) >= 1000000000) {
-      return `$${(value / 1000000000).toFixed(1)}B`
+    const millions = value / 1_000_000
+    const absMillions = Math.abs(millions)
+    let formatted
+    if (absMillions >= 1000) {
+      formatted = millions.toLocaleString('de-DE', { maximumFractionDigits: 0 })
+    } else {
+      formatted = millions.toFixed(1)
     }
-    if (Math.abs(value) >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`
-    }
-    return `$${(value / 1000).toFixed(0)}K`
+    return `$${formatted} MM`
   }
 
   const CustomTooltip = ({ active, payload }) => {
