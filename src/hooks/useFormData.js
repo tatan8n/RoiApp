@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS, SERVICE_TYPES } from '../utils/constants'
+import { EQUIPMENT_MODELS, DEFAULT_BENCHMARKS, DEFAULT_FINANCIAL_PARAMS, SERVICE_TYPES, ROTODYNAMIC_BENCHMARKS } from '../utils/constants'
 
 const initialFormData = {
   client: {
@@ -16,6 +16,26 @@ const initialFormData = {
   },
   calculationType: 'product',
   serviceType: null,
+  currency: 'COP',
+  rotodynamic: {
+    serviceValue: null,
+    numTurbines: null,
+    technology: '',
+    nominalCapacity: null,
+    yearsOfOperation: null,
+    costPerHourStop: null,
+    criticalFailures: null,
+    avgStopDuration: null,
+    mttr: null,
+    externalInterventionCost: null,
+    reactiveManHours: null,
+    internalLaborCost: null,
+    billingAffected: null,
+    sparePartsDelay: null,
+    heatRateDesign: null,
+    heatRateActual: null,
+    fuelCost: null
+  },
   operational: {
     totalAssets: null,
     criticalAssets: null,
@@ -38,6 +58,7 @@ const initialFormData = {
     annualEnergyCost: null
   },
   benchmarks: { ...DEFAULT_BENCHMARKS },
+  rotodynamicBenchmarks: { ...ROTODYNAMIC_BENCHMARKS },
   financial: { ...DEFAULT_FINANCIAL_PARAMS },
   customWeights: null
 }
@@ -74,6 +95,13 @@ export function useFormData() {
     }))
   }, [])
 
+  const updateRotodynamicBenchmarks = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      rotodynamicBenchmarks: { ...prev.rotodynamicBenchmarks, [field]: value }
+    }))
+  }, [])
+
   const updateFinancial = useCallback((field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -92,7 +120,8 @@ export function useFormData() {
     setFormData(prev => ({
       ...prev,
       calculationType: type,
-      serviceType: type === 'service' ? prev.serviceType || 'rotodinamico' : null
+      serviceType: type === 'service' ? prev.serviceType || 'rotodinamico' : null,
+      currentStep: 1
     }))
   }, [])
 
@@ -100,6 +129,20 @@ export function useFormData() {
     setFormData(prev => ({
       ...prev,
       serviceType
+    }))
+  }, [])
+
+  const updateCurrency = useCallback((currency) => {
+    setFormData(prev => ({
+      ...prev,
+      currency
+    }))
+  }, [])
+
+  const updateRotodynamic = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      rotodynamic: { ...prev.rotodynamic, [field]: value === '' ? null : value }
     }))
   }, [])
 
@@ -123,20 +166,36 @@ export function useFormData() {
   }, [])
 
   const getInvestment = useCallback(() => {
-    if (formData.equipment.customPrice && formData.equipment.customPrice > 0) {
-      return formData.equipment.customPrice * 1_000_000
+    if (formData.calculationType === 'product') {
+      if (formData.equipment.customPrice && formData.equipment.customPrice > 0) {
+        return formData.equipment.customPrice * 1_000_000
+      }
+      const model = EQUIPMENT_MODELS.find(m => m.id === formData.equipment.modelId)
+      return model ? model.price : 0
+    } else {
+      return formData.rotodynamic.serviceValue || 0
     }
-    const model = EQUIPMENT_MODELS.find(m => m.id === formData.equipment.modelId)
-    return model ? model.price : 0
-  }, [formData.equipment])
+  }, [formData.equipment, formData.rotodynamic.serviceValue, formData.calculationType])
 
   const getCompleteData = useCallback(() => {
-    return {
-      investment: getInvestment(),
-      ...formData.operational,
-      benchmarks: formData.benchmarks,
-      discountRate: formData.financial.discountRate,
-      projectionYears: formData.financial.projectionYears
+    if (formData.calculationType === 'product') {
+      return {
+        investment: getInvestment(),
+        ...formData.operational,
+        benchmarks: formData.benchmarks,
+        discountRate: formData.financial.discountRate,
+        projectionYears: formData.financial.projectionYears
+      }
+    } else {
+      return {
+        investment: formData.rotodynamic.serviceValue || 0,
+        currency: formData.currency,
+        ...formData.rotodynamic,
+        benchmarks: formData.rotodynamicBenchmarks,
+        discountRate: formData.financial.discountRate,
+        projectionYears: formData.financial.projectionYears,
+        billing: formData.rotodynamic.billingAffected
+      }
     }
   }, [formData, getInvestment])
 
@@ -147,10 +206,13 @@ export function useFormData() {
     updateEquipment,
     updateOperational,
     updateBenchmarks,
+    updateRotodynamicBenchmarks,
     updateFinancial,
     updateCustomWeights,
     updateCalculationType,
     updateServiceType,
+    updateCurrency,
+    updateRotodynamic,
     nextStep,
     prevStep,
     goToStep,

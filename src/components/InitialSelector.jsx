@@ -1,8 +1,9 @@
 import React from 'react'
-import { PRODUCT_LINE, SERVICE_TYPES, EQUIPMENT_MODELS } from '../utils/constants'
+import { PRODUCT_LINE, SERVICE_TYPES, EQUIPMENT_MODELS, CURRENCIES } from '../utils/constants'
 
-export default function InitialSelector({ calculationType, serviceType, onCalculationTypeChange, onServiceTypeChange, onContinue }) {
+export default function InitialSelector({ calculationType, serviceType, currency, onCalculationTypeChange, onServiceTypeChange, onCurrencyChange, onContinue }) {
   const selectedService = SERVICE_TYPES.find(s => s.id === serviceType)
+  const isRotodynamic = serviceType === 'rotodinamico'
 
   return (
     <div className="min-h-screen bg-navy-50 flex items-center justify-center px-4">
@@ -110,6 +111,40 @@ export default function InitialSelector({ calculationType, serviceType, onCalcul
                       </div>
                     </label>
                   ))}
+
+                  {isRotodynamic && (
+                    <div className="mt-4 p-4 bg-navy-100 rounded-lg border border-navy-200">
+                      <p className="text-sm font-medium text-navy-700 mb-3">Moneda de trabajo:</p>
+                      <div className="flex gap-4">
+                        {CURRENCIES.map(curr => (
+                          <label
+                            key={curr.id}
+                            className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                              currency === curr.id
+                                ? 'border-navy-500 bg-white'
+                                : 'border-navy-200 bg-white hover:border-navy-400'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="currency"
+                              value={curr.id}
+                              checked={currency === curr.id}
+                              onChange={() => onCurrencyChange(curr.id)}
+                              className="w-4 h-4 text-navy-600"
+                            />
+                            <div className="ml-2">
+                              <span className="font-medium text-navy-800">{curr.name}</span>
+                              <span className="text-xs text-navy-500 ml-2">({curr.description})</span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-navy-400 mt-2">
+                        Todos los cálculos y resultados se mostrarán en la moneda seleccionada.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </label>

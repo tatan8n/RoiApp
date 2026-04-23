@@ -1,5 +1,5 @@
 import React from 'react'
-import { STEPS_CONFIG } from '../utils/constants'
+import { STEPS_CONFIG, ROTODYNAMIC_STEPS_CONFIG } from '../utils/constants'
 import Header from '../components/Header'
 import StepIndicator from '../components/StepIndicator'
 import ClientForm from '../components/ClientForm'
@@ -9,31 +9,50 @@ import BenchmarkForm from '../components/BenchmarkForm'
 import FinancialForm from '../components/FinancialForm'
 import NavigationButtons from '../components/NavigationButtons'
 import ResultsDashboard from './ResultsDashboard'
-import ServicePlaceholder from '../components/ServicePlaceholder'
+import RotodynamicForm from '../components/RotodynamicForm'
+import RotodynamicBenchmarkForm from '../components/RotodynamicBenchmarkForm'
 import { calculateAll } from '../utils/calculations'
-import { downloadPDF } from '../utils/pdfGenerator'
+import { calculateAllRotodynamic } from '../utils/calculationsRotodynamic'
 import { downloadHTML } from '../utils/htmlExporter'
+import ServiceValueForm from '../components/ServiceValueForm'
 
-export default function FormWizard({ formData, currentStep, updateClient, updateEquipment, updateOperational, updateBenchmarks, updateFinancial, nextStep, prevStep, getCompleteData, getInvestment }) {
+export default function FormWizard({
+  formData,
+  currentStep,
+  updateClient,
+  updateEquipment,
+  updateOperational,
+  updateBenchmarks,
+  updateRotodynamicBenchmarks,
+  updateFinancial,
+  updateRotodynamic,
+  nextStep,
+  prevStep,
+  getCompleteData,
+  getInvestment,
+  onGoHome
+}) {
   const [results, setResults] = React.useState(null)
   const [showResults, setShowResults] = React.useState(false)
 
   const isProduct = formData.calculationType === 'product'
   const isService = formData.calculationType === 'service'
+  const isRotodynamic = formData.serviceType === 'rotodinamico'
 
   const handleCalculate = () => {
     const data = getCompleteData()
-    const calcResults = calculateAll(data)
+    let calcResults
+    if (isRotodynamic) {
+      calcResults = calculateAllRotodynamic(data)
+    } else {
+      calcResults = calculateAll(data)
+    }
     setResults(calcResults)
     setShowResults(true)
   }
 
   const handleBackToForm = () => {
     setShowResults(false)
-  }
-
-  const handleExportPDF = () => {
-    downloadPDF(formData, results)
   }
 
   const handleExportHTML = () => {
@@ -44,16 +63,32 @@ export default function FormWizard({ formData, currentStep, updateClient, update
   }
 
   const handleNext = () => {
-    if (currentStep === 3 && isProduct) {
-      handleCalculate()
-    } else if (currentStep === 4 && isProduct) {
-      nextStep()
-    } else if (currentStep === 2 && isService) {
-      nextStep()
-    } else if (currentStep === 3 && isService) {
-      handleCalculate()
+    if (isProduct) {
+      if (currentStep === 3) {
+        handleCalculate()
+      } else if (currentStep === 4) {
+        nextStep()
+      } else {
+        nextStep()
+      }
     } else {
-      nextStep()
+      if (isRotodynamic) {
+        if (currentStep === 2) {
+          nextStep()
+        } else if (currentStep === 3) {
+          handleCalculate()
+        } else {
+          nextStep()
+        }
+      } else {
+        if (currentStep === 2) {
+          nextStep()
+        } else if (currentStep === 3) {
+          handleCalculate()
+        } else {
+          nextStep()
+        }
+      }
     }
   }
 
@@ -63,13 +98,16 @@ export default function FormWizard({ formData, currentStep, updateClient, update
         formData={formData}
         results={results}
         onBack={handleBackToForm}
-        onExportPDF={handleExportPDF}
+        onGoHome={onGoHome}
         onExportHTML={handleExportHTML}
       />
     )
   }
 
   const getStepsConfig = () => {
+    if (isRotodynamic) {
+      return ROTODYNAMIC_STEPS_CONFIG
+    }
     if (isService) {
       return [
         { id: 1, title: 'Cliente y Servicio', description: 'Información del cliente y tipo de servicio' },
@@ -84,7 +122,7 @@ export default function FormWizard({ formData, currentStep, updateClient, update
 
   return (
     <div className="min-h-screen bg-navy-50">
-      <Header />
+      <Header onGoHome={onGoHome} />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         <StepIndicator currentStep={currentStep} steps={getStepsConfig()} />
@@ -94,7 +132,18 @@ export default function FormWizard({ formData, currentStep, updateClient, update
             <div className="space-y-6">
               <ClientForm data={formData.client} onChange={updateClient} />
               {isProduct && <EquipmentForm data={formData.equipment} onChange={updateEquipment} />}
-              {isService && <ServicePlaceholder serviceType={formData.serviceType} />}
+              {isService && (
+                <ServiceValueForm
+                  serviceType={formData.serviceType}
+                  currency={formData.currency}
+                  serviceValue={formData.rotodynamic?.serviceValue}
+                  onChange={(field, value) => {
+                    if (field === 'serviceValue') {
+                      updateRotodynamic(field, value)
+                    }
+                  }}
+                />
+              )}
             </div>
           )}
 
@@ -102,12 +151,19 @@ export default function FormWizard({ formData, currentStep, updateClient, update
             <OperationalForm data={formData.operational} onChange={updateOperational} />
           )}
 
-          {currentStep === 2 && isService && (
+          {currentStep === 2 && isService && isRotodynamic && (
+            <RotodynamicForm
+              data={formData.rotodynamic}
+              onChange={updateRotodynamic}
+              currency={formData.currency}
+            />
+          )}
+
+          {currentStep === 2 && isService && !isRotodynamic && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-navy-900 mb-4">Datos del Servicio</h2>
               <p className="text-navy-600">
-                La metodología de preguntas para servicios está en desarrollo.
-                Mientras tanto, puede continuar con el proceso manualmente.
+                La metodología de preguntas para este servicio está en desarrollo.
               </p>
             </div>
           )}
@@ -116,7 +172,14 @@ export default function FormWizard({ formData, currentStep, updateClient, update
             <BenchmarkForm data={formData.benchmarks} onChange={updateBenchmarks} />
           )}
 
-          {currentStep === 3 && isService && (
+          {currentStep === 3 && isService && isRotodynamic && (
+            <RotodynamicBenchmarkForm
+              benchmarks={formData.rotodynamicBenchmarks}
+              onChange={updateRotodynamicBenchmarks}
+            />
+          )}
+
+          {currentStep === 3 && isService && !isRotodynamic && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-navy-900 mb-4">Confirmación</h2>
               <p className="text-navy-600">
@@ -128,15 +191,19 @@ export default function FormWizard({ formData, currentStep, updateClient, update
           {currentStep === 4 && isProduct && (
             <FinancialForm data={formData.financial} onChange={updateFinancial} />
           )}
+
+          {currentStep === 4 && isService && isRotodynamic && (
+            <FinancialForm data={formData.financial} onChange={updateFinancial} />
+          )}
         </div>
 
         <NavigationButtons
           onPrev={prevStep}
           onNext={handleNext}
           showPrev={currentStep > 1}
-          showNext={currentStep < 4}
-          showCalculate={currentStep === 4 && isProduct}
-          nextLabel={currentStep === 4 && isProduct ? 'Calcular ROI' : 'Siguiente'}
+          showNext={currentStep < (isProduct ? 4 : isRotodynamic ? 4 : 3)}
+          showCalculate={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : 3) && isService}
+          nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
         />
       </div>
     </div>

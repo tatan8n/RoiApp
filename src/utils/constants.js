@@ -141,3 +141,92 @@ export const STEPS_CONFIG = [
   { id: 3, title: 'Factores de Mejora', description: 'Benchmarks de mejora esperados' },
   { id: 4, title: 'Parámetros Financieros', description: 'Tasa de descuento y horizonte de tiempo' }
 ]
+
+export const ROTODYNAMIC_SECTIONS = [
+  {
+    id: 'inventory',
+    title: 'Inventario y Capacidad',
+    icon: '⚙️',
+    description: 'Datos de equipos rotodinámicos',
+    fields: ['numTurbines', 'technology', 'nominalCapacity', 'yearsOfOperation']
+  },
+  {
+    id: 'failureParams',
+    title: 'Parámetros de Falla',
+    icon: '⚠️',
+    description: 'Costos y frecuencia de fallas',
+    fields: ['costPerHourStop', 'criticalFailures', 'avgStopDuration', 'mttr']
+  },
+  {
+    id: 'maintenanceCosts',
+    title: 'Costos de Mantenimiento',
+    icon: '🔧',
+    description: 'Estructura de costos de mantenimiento',
+    fields: ['externalInterventionCost', 'reactiveManHours', 'internalLaborCost', 'billingAffected']
+  },
+  {
+    id: 'efficiency',
+    title: 'Logística y Eficiencia',
+    icon: '📊',
+    description: 'Repuestos y eficiencia termodinámica',
+    fields: ['sparePartsDelay', 'heatRateDesign', 'heatRateActual', 'fuelCost']
+  }
+]
+
+export const ROTODYNAMIC_FIELDS = [
+  { id: 'numTurbines', label: 'Número de turbinas/generadores', unit: 'unidades', placeholder: 'Ej: 4', benchmarkHint: 'Cantidad de máquinas rotodinámicas en la planta' },
+  { id: 'technology', label: 'Tecnología y marca', unit: 'texto', placeholder: 'Ej: GE Frame 7FA, Siemens SGT6-5000F', benchmarkHint: 'Marca y modelo de la turbina' },
+  { id: 'nominalCapacity', label: 'Capacidad nominal por unidad', unit: 'MW', placeholder: 'Ej: 250', benchmarkHint: 'Potencia nominal en MW de cada unidad' },
+  { id: 'yearsOfOperation', label: 'Años de operación (edad del activo)', unit: 'años', placeholder: 'Ej: 15', benchmarkHint: 'Antigüedad del equipo' },
+  { id: 'costPerHourStop', label: 'Costo por hora de paro (margen de contribución perdido)', unit: '/hora', placeholder: 'Ej: 50000000', isCurrency: true, benchmarkHint: 'Margen de contribución perdido por hora de indisponibilidad' },
+  { id: 'criticalFailures', label: 'Frecuencia de fallas críticas (últimos 24 meses)', unit: 'eventos', placeholder: 'Ej: 3', benchmarkHint: 'Cantidad de fallas rotodinámicas críticas en los últimos 2 años' },
+  { id: 'avgStopDuration', label: 'Duración promedio de paros no programados', unit: 'horas', placeholder: 'Ej: 48', benchmarkHint: 'Horas promedio por evento de paro no planificado' },
+  { id: 'mttr', label: 'MTTR Histórico (tiempo de rehabilitación)', unit: 'horas', placeholder: 'Ej: 72', benchmarkHint: 'Tiempo promedio para rehabilitar el equipo tras falla catastrófica' },
+  { id: 'externalInterventionCost', label: 'Costo promedio intervención externa de emergencia', unit: '', placeholder: 'Ej: 150000000', isCurrency: true, benchmarkHint: 'Facturación promedio de servicios de terceros para reparaciones de emergencia' },
+  { id: 'reactiveManHours', label: 'HH anuales de mantenimiento reactivo', unit: 'horas/año', placeholder: 'Ej: 2400', benchmarkHint: 'Total horas anuales dedicadas a corregir fallas imprevistas' },
+  { id: 'internalLaborCost', label: 'Costo hora-hombre interna (con prestaciones)', unit: '/hora', placeholder: 'Ej: 80000', isCurrency: true, benchmarkHint: 'Costo total de mano de obra interna incluyendo carga prestacional' },
+  { id: 'billingAffected', label: 'Facturación afectada (multas/créditos energía no entregada)', unit: '/año', placeholder: 'Ej: 500000000', isCurrency: true, benchmarkHint: 'Penalizaciones o créditos por energía no suministrada en el balance anual' },
+  { id: 'sparePartsDelay', label: 'Días promedio de demora en repuestos críticos', unit: 'días', placeholder: 'Ej: 60', benchmarkHint: 'Tiempo promedio desde identificación hasta llegada del repuesto (8-24 semanas típico)' },
+  { id: 'heatRateDesign', label: 'Heat rate de diseño', unit: 'BTU/kWh', placeholder: 'Ej: 9500', benchmarkHint: 'Eficiencia termodinámica de diseño del equipo' },
+  { id: 'heatRateActual', label: 'Heat rate actual', unit: 'BTU/kWh', placeholder: 'Ej: 10200', benchmarkHint: 'Eficiencia termodinámica actual (mayor = peor)' },
+  { id: 'fuelCost', label: 'Costo de combustible', unit: '/kWh', placeholder: 'Ej: 150', isCurrency: true, benchmarkHint: 'Costo del combustible por kWh producido' }
+]
+
+export const ROTODYNAMIC_BENCHMARKS = {
+  reductionFailures: 0.40,
+  reductionHeatRate: 0.02,
+  optimizationHH: 0.30,
+  reductionDelays: 0.25,
+  extensionLife: 0.25,
+  riskReduction: 0.10
+}
+
+export const ROTODYNAMIC_BENCHMARK_FIELDS = [
+  { id: 'reductionFailures', label: '% Reducción de lucro cesante (fillas evitadas)', weight: 15, default: 0.40, benchmark: '35-45% reducción (EPRI), hasta 73% en ciclo combinado' },
+  { id: 'reductionHeatRate', label: '% Mejora en heat rate (eficiencia termodinámica)', weight: 12, default: 0.02, benchmark: '1-3% mejora (EPRI)' },
+  { id: 'optimizationHH', label: '% Optimización de horas-hombre reactivas', weight: 10, default: 0.30, benchmark: '30% reducción en costos totales de labor' },
+  { id: 'reductionDelays', label: '% Reducción de demoras por repuestos', weight: 8, default: 0.25, benchmark: '20-30% reducción en costos de inventario' },
+  { id: 'extensionLife', label: '% Extensión de vida útil de activos', weight: 7, default: 0.25, benchmark: '20-40% (McKinsey)' },
+  { id: 'riskReduction', label: '% Reducción de riesgos de seguridad / primas de seguro', weight: 5, default: 0.10, benchmark: '5-15% (OPMaint, PWC)' }
+]
+
+export const ROTODYNAMIC_STEPS_CONFIG = [
+  { id: 1, title: 'Cliente y Servicio', description: 'Información del cliente y valor del servicio' },
+  { id: 2, title: 'Datos del Servicio', description: 'Parámetros técnicos y operativos' },
+  { id: 3, title: 'Factores de Mejora', description: 'Benchmarks de mejora esperados' },
+  { id: 4, title: 'Parámetros Financieros', description: 'Tasa de descuento y horizonte de evaluación' }
+]
+
+export const ROTODYNAMIC_FACTOR_WEIGHTS = {
+  f1: 15,
+  f2: 12,
+  f3: 10,
+  f4: 8,
+  f5: 7,
+  f6: 5
+}
+
+export const CURRENCIES = [
+  { id: 'COP', name: 'COP', symbol: '$', description: 'Pesos Colombianos' },
+  { id: 'USD', name: 'USD', symbol: '$', description: 'Dólares Americanos' }
+]

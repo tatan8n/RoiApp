@@ -11,13 +11,17 @@ function App() {
     updateEquipment,
     updateOperational,
     updateBenchmarks,
+    updateRotodynamicBenchmarks,
     updateFinancial,
     updateCalculationType,
     updateServiceType,
+    updateCurrency,
+    updateRotodynamic,
     nextStep,
     prevStep,
     getCompleteData,
-    getInvestment
+    getInvestment,
+    resetForm
   } = useFormData()
 
   const [showSelector, setShowSelector] = React.useState(true)
@@ -26,13 +30,20 @@ function App() {
     setShowSelector(false)
   }
 
+  const handleGoHome = () => {
+    setShowSelector(true)
+    resetForm()
+  }
+
   if (showSelector) {
     return (
       <InitialSelector
         calculationType={formData.calculationType}
         serviceType={formData.serviceType}
+        currency={formData.currency}
         onCalculationTypeChange={updateCalculationType}
         onServiceTypeChange={updateServiceType}
+        onCurrencyChange={updateCurrency}
         onContinue={handleContinueFromSelector}
       />
     )
@@ -46,11 +57,14 @@ function App() {
       updateEquipment={updateEquipment}
       updateOperational={updateOperational}
       updateBenchmarks={updateBenchmarks}
+      updateRotodynamicBenchmarks={updateRotodynamicBenchmarks}
       updateFinancial={updateFinancial}
+      updateRotodynamic={updateRotodynamic}
       nextStep={nextStep}
       prevStep={prevStep}
       getCompleteData={getCompleteData}
       getInvestment={getInvestment}
+      onGoHome={handleGoHome}
     />
   )
 }
