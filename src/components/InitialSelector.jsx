@@ -1,5 +1,5 @@
 import React from 'react'
-import { PRODUCT_LINE, SERVICE_TYPES, EQUIPMENT_MODELS, CURRENCIES } from '../utils/constants'
+import { SERVICE_TYPES, EQUIPMENT_MODELS, CURRENCIES } from '../utils/constants'
 
 export default function InitialSelector({ calculationType, serviceType, currency, onCalculationTypeChange, onServiceTypeChange, onCurrencyChange, onContinue }) {
   const selectedService = SERVICE_TYPES.find(s => s.id === serviceType)
@@ -9,12 +9,18 @@ export default function InitialSelector({ calculationType, serviceType, currency
     <div className="min-h-screen bg-navy-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 mb-2">
+          <img
+            src="Logo A-MAQ (1)_Mesa de trabajo 1.png"
+            alt="A-MAQ Logo"
+            className="h-20 w-auto mx-auto"
+            style={{ filter: 'brightness(0) contrast(1.2)' }}
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
+          />
+          <h1 className="text-3xl font-bold text-navy-900 mt-4 mb-2">
             Calculadora ROI
           </h1>
-          <p className="text-navy-600">
-            Línea de Negocio: <span className="font-semibold">{PRODUCT_LINE.name}</span>
-          </p>
         </div>
 
         <div className="mb-8">
