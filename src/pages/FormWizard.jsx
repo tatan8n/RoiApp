@@ -262,7 +262,7 @@ export default function FormWizard({
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-navy-900 mb-4">Resumen del Contrato Marco</h2>
               <p className="text-navy-600">
-                Revisa la información y haz clic en "Calcular ROI" para ver los resultados.
+                Haz clic en "Calcular ROI" para ver los resultados.
               </p>
             </div>
           )}
@@ -273,7 +273,6 @@ export default function FormWizard({
           onNext={handleNext}
           showPrev={currentStep > 1}
           showNext={currentStep < (isProduct ? 4 : isRotodynamic ? 4 : isContratoMarco ? 5 : 3)}
-          showCalculate={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService}
           nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
         />
       </div>

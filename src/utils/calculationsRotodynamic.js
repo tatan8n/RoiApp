@@ -302,6 +302,7 @@ export function calculateAllRotodynamic(data) {
   const totalSavings = calculateRotodynamicTotalSavings(factors)
   const investment = data.investment || 0
   const projectionYears = data.projectionYears || 5
+  const discountRate = data.discountRate || 0.12
 
   const roi = calculateRotodynamicROI(investment, totalSavings, projectionYears)
   const payback = calculateRotodynamicPayback(investment, totalSavings)
