@@ -3,12 +3,15 @@ import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES } fro
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
 const RISK_COST_FRACTION = 0.02
-const MAX_SAVINGS_OF_REVENUE = 0.15
+const MAX_SAVINGS_OF_REVENUE = 0.30
 const ANNUAL_OPERATING_HOURS = 8760
 
 const ROI_WARNING_THRESHOLD = 300
 const ROI_DANGER_THRESHOLD = 500
-const DOMINANT_FACTOR_RATIO = 0.50
+const DOMINANT_FACTOR_RATIO = 0.70
+const COP_EXCHANGE_RATE = 4000
+const NEW_TURBINE_LOSS_FACTOR = 0.01
+const MAX_HOURS_PER_YEAR = 8760
 
 function getTurbineVENS(turbineType) {
   const turbine = TURBINE_TYPES.find(t => t.id === turbineType)
@@ -102,10 +105,12 @@ export function calculateRotodynamicFactors(data) {
 
   if (isNewTurbine(data)) {
     const vens = getTurbineVENS(turbineType)
-    const vensCOP = data.currency === 'USD' ? vens * 4000 : vens * 20000000
+    const vensPerKWh = currency === 'USD' ? vens / 1000 : (vens * COP_EXCHANGE_RATE) / 1000
 
-    if (hasCapacityData && vensCOP > 0) {
-      const estimatedAnnualLoss = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS * 0.05 * vensCOP * 0.001
+    if (hasCapacityData && vensPerKWh > 0) {
+      const annualEnergyKWh = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS
+      const annualLossKWh = annualEnergyKWh * NEW_TURBINE_LOSS_FACTOR
+      const estimatedAnnualLoss = annualLossKWh * vensPerKWh
       factors.f1.baseValue = estimatedAnnualLoss
       factors.f1.savings = factors.f1.baseValue * reductionFailures
       factors.f1.answered = true
@@ -145,7 +150,8 @@ export function calculateRotodynamicFactors(data) {
   }
 
   if (numTurbines !== null && nominalCapacity !== null && numTurbines > 0 && nominalCapacity > 0) {
-    const assetValue = numTurbines * nominalCapacity * 1_000_000
+    const assetValuePerMW = currency === 'USD' ? 1_000_000 : 4_000_000_000
+    const assetValue = numTurbines * nominalCapacity * assetValuePerMW
     const annualDeferral = assetValue / 15
     factors.f5.baseValue = annualDeferral
     factors.f5.savings = annualDeferral * extensionLife
@@ -158,7 +164,11 @@ export function calculateRotodynamicFactors(data) {
     factors.f6.savings = safetySavingsYear * riskReduction
     factors.f6.answered = true
   } else if (hasCapacityData && nominalCapacity > 0) {
-    const estimatedBilling = nominalCapacity * 1000 * 24 * 365 * 0.05
+    const vens = getTurbineVENS(turbineType)
+    const vensPerKWh = currency === 'USD' ? vens / 1000 : (vens * COP_EXCHANGE_RATE) / 1000
+    const annualEnergyKWh = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS
+    const annualLossKWh = annualEnergyKWh * 0.05
+    const estimatedBilling = annualLossKWh * vensPerKWh
     const safetySavingsYear = estimatedBilling * RISK_COST_FRACTION
     factors.f6.baseValue = safetySavingsYear
     factors.f6.savings = safetySavingsYear * riskReduction
@@ -174,9 +184,10 @@ export function calculateRotodynamicTotalSavings(factors) {
   }, 0)
 }
 
-export function calculateRotodynamicROI(investment, annualSavings) {
-  if (!investment || investment <= 0 || !annualSavings || annualSavings <= 0) return 0
-  return ((annualSavings - investment) / investment) * 100
+export function calculateRotodynamicROI(totalSavings, investment, projectionYears) {
+  if (!investment || investment <= 0) return 0
+  const totalBenefits = totalSavings * projectionYears
+  return ((totalBenefits - investment) / investment) * 100
 }
 
 export function calculateRotodynamicPayback(investment, annualSavings) {
@@ -290,13 +301,11 @@ export function calculateAllRotodynamic(data) {
   const factors = calculateRotodynamicFactors(data)
   const totalSavings = calculateRotodynamicTotalSavings(factors)
   const investment = data.investment || 0
+  const projectionYears = data.projectionYears || 5
 
-  const roi = calculateRotodynamicROI(investment, totalSavings)
+  const roi = calculateRotodynamicROI(investment, totalSavings, projectionYears)
   const payback = calculateRotodynamicPayback(investment, totalSavings)
   const benefitCostRatio = calculateRotodynamicBenefitCostRatio(investment, totalSavings)
-
-  const discountRate = data.discountRate || 0.12
-  const projectionYears = data.projectionYears || 5
 
   const van = calculateRotodynamicVAN(totalSavings, investment, discountRate, projectionYears)
   const tir = calculateRotodynamicTIR(totalSavings, investment, projectionYears)
@@ -307,6 +316,31 @@ export function calculateAllRotodynamic(data) {
   const dominantFactors = getRotodynamicDominantFactors(factors, totalSavings)
   const roiWarning = roi > ROI_WARNING_THRESHOLD
   const roiSeverity = roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null
+
+  const warnings = []
+  if (data.costPerHourStop > 0 && data.yearsOfOperation <= 2) {
+    const vens = getTurbineVENS(data.turbineType)
+    const maxReasonableStopCost = vens * 100
+    if (data.costPerHourStop > maxReasonableStopCost) {
+      warnings.push({
+        type: 'extreme_value',
+        field: 'costPerHourStop',
+        message: `El costo por hora de paro (${data.currency === 'USD' ? '$' : ''}${data.costPerHourStop.toLocaleString()}${data.currency === 'USD' ? ' USD' : ' MM COP'}/h) excede 100x el VENS típico (${vens} USD/MWh = ${vens * 0.001} USD/kWh). Verifique que el valor esté en la unidad correcta.`
+      })
+    }
+  }
+  if (investment > 0) {
+    const minInvestment = data.currency === 'USD' ? 1000 : 1_000_000_000
+    if (investment < minInvestment) {
+      warnings.push({
+        type: 'low_investment',
+        field: 'serviceValue',
+        message: data.currency === 'USD'
+          ? `La inversión declarada ($${investment.toLocaleString()} USD) es muy baja para un servicio de diagnóstico rotodinámico. Se recomienda un valor mínimo de $1,000 USD para resultados más realistas.`
+          : `La inversión declarada (${(investment / 1_000_000).toFixed(0)} MM COP) es muy baja para un servicio de diagnóstico rotodinámico. Se recomienda un valor mínimo de 1,000 MM COP para resultados más realistas.`
+      })
+    }
+  }
 
   let savingsOverCap = false
   let savingsCapPct = null
@@ -340,7 +374,9 @@ export function calculateAllRotodynamic(data) {
     savingsCapPct,
     projection,
     monthlySavings: totalSavings / 12,
-    manHourCost: 0
+    manHourCost: 0,
+    warnings,
+    projectionYears
   }
 }
 

@@ -88,7 +88,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
           <KPICard
             title="ROI"
             value={`${results.roi?.toFixed(1) || 0}%`}
-            subtitle="Retorno de inversión"
+            subtitle={`Retorno en ${results.projectionYears || 5} años`}
             color={results.roi > 0 ? COLORS.success : COLORS.danger}
             icon="📈"
           />
@@ -155,7 +155,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
               <div>
                 <p className="text-amber-800 font-bold">Ahorro total desproporcionado</p>
                 <p className="text-amber-600 text-sm mt-1">
-                  El ahorro anual representa el {results.savingsCapPct}% de la facturaci&#243;n anual, lo cual supera el 15% t&#237;pico para mantenimiento predictivo (benchmark: PwC, DOE). Los ahorros de PdM raramente exceden el 10-15% de la facturaci&#243;n.
+                  El ahorro anual representa el {results.savingsCapPct}% de la facturaci&#243;n anual, lo cual supera el 30% t&#237;pico para mantenimiento predictivo en plantas de generaci&#243;n el&#233;ctrica. Los ahorros de PdM en este sector pueden ser mayores que en manufactura. Verifique que los datos de entrada sean correctos.
                 </p>
               </div>
             </div>
@@ -172,6 +172,20 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
                   {dominantFactors.map(df => `${df.name} (${df.ratio}% del ahorro total)`).join(', ')}.
                   Un solo factor domina el resultado, lo que puede reducir la confiabilidad de la proyecci&#243;n. Considere verificar los datos de ese factor.
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {results.warnings && results.warnings.length > 0 && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl">
+            <div className="flex items-start">
+              <span className="text-xl mr-3">&#128161;</span>
+              <div>
+                <p className="text-blue-800 font-bold">Verificación de datos ingresados</p>
+                {results.warnings.map((warning, idx) => (
+                  <p key={idx} className="text-blue-600 text-sm mt-1">{warning.message}</p>
+                ))}
               </div>
             </div>
           </div>

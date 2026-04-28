@@ -221,14 +221,38 @@ export function useFormData() {
         billing: formData.operational.monthlyBilling ? formData.operational.monthlyBilling * 12 : null
       }
     } else {
+      const isCOP = formData.currency === 'COP'
+      const toFull = (val) => (val !== null && val !== undefined && isCOP) ? val * 1_000_000 : (val || 0)
+
+      const rotodynamicData = formData.rotodynamic
+      const serviceValueFull = rotodynamicData.serviceValue != null
+        ? (isCOP ? rotodynamicData.serviceValue * 1_000_000 : rotodynamicData.serviceValue)
+        : 0
+
       return {
-        investment: formData.rotodynamic.serviceValue || 0,
+        investment: serviceValueFull,
         currency: formData.currency,
-        ...formData.rotodynamic,
+        numTurbines: rotodynamicData.numTurbines,
+        turbineType: rotodynamicData.turbineType,
+        nominalCapacity: rotodynamicData.nominalCapacity,
+        yearsOfOperation: rotodynamicData.yearsOfOperation,
+        technology: rotodynamicData.technology,
+        costPerHourStop: toFull(rotodynamicData.costPerHourStop),
+        criticalFailures: rotodynamicData.criticalFailures,
+        avgStopDuration: rotodynamicData.avgStopDuration,
+        mttr: rotodynamicData.mttr,
+        externalInterventionCost: toFull(rotodynamicData.externalInterventionCost),
+        reactiveManHours: rotodynamicData.reactiveManHours,
+        internalLaborCost: toFull(rotodynamicData.internalLaborCost),
+        billingAffected: toFull(rotodynamicData.billingAffected),
+        sparePartsDelay: rotodynamicData.sparePartsDelay,
+        heatRateDesign: rotodynamicData.heatRateDesign,
+        heatRateActual: rotodynamicData.heatRateActual,
+        fuelCost: toFull(rotodynamicData.fuelCost),
         benchmarks: formData.rotodynamicBenchmarks,
         discountRate: formData.financial.discountRate,
         projectionYears: formData.financial.projectionYears,
-        billing: formData.rotodynamic.billingAffected
+        billing: toFull(rotodynamicData.billingAffected)
       }
     }
   }, [formData, getInvestment, isContratoMarco])

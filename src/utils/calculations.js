@@ -240,9 +240,10 @@ export function calculateTotalSavings(factors) {
   }, 0)
 }
 
-export function calculateROI(investment, annualSavings) {
-  if (investment <= 0 || annualSavings <= 0) return 0
-  return ((annualSavings - investment) / investment) * 100
+export function calculateROI(investment, totalSavings, projectionYears) {
+  if (investment <= 0) return 0
+  const totalBenefits = totalSavings * projectionYears
+  return ((totalBenefits - investment) / investment) * 100
 }
 
 export function calculatePayback(investment, annualSavings) {
@@ -251,9 +252,9 @@ export function calculatePayback(investment, annualSavings) {
   return Math.round(paybackMonths * 10) / 10
 }
 
-export function calculateBenefitCostRatio(investment, annualSavings) {
+export function calculateBenefitCostRatio(investment, totalSavings, projectionYears) {
   if (investment <= 0) return 0
-  return annualSavings / investment
+  return (totalSavings * projectionYears) / investment
 }
 
 export function calculateVAN(annualSavings, investment, discountRate, years) {
@@ -372,12 +373,12 @@ export function calculateAll(data) {
   const totalSavings = calculateTotalSavings(factors)
   const investment = data.investment || 0
 
-  const roi = calculateROI(investment, totalSavings)
-  const payback = calculatePayback(investment, totalSavings)
-  const benefitCostRatio = calculateBenefitCostRatio(investment, totalSavings)
-
   const discountRate = data.discountRate || 0.12
   const projectionYears = data.projectionYears || 5
+
+  const roi = calculateROI(investment, totalSavings, projectionYears)
+  const payback = calculatePayback(investment, totalSavings)
+  const benefitCostRatio = calculateBenefitCostRatio(investment, totalSavings, projectionYears)
 
   const van = calculateVAN(totalSavings, investment, discountRate, projectionYears)
   const tir = calculateTIR(totalSavings, investment, projectionYears)
@@ -427,7 +428,8 @@ export function calculateAll(data) {
     savingsCapPct,
     projection,
     monthlySavings: totalSavings / 12,
-    manHourCost
+    manHourCost,
+    projectionYears
   }
 }
 
@@ -525,6 +527,7 @@ export function calculateAllContratoMarco(data) {
     projection,
     monthlySavings: totalSavingsSum / 12,
     manHourCost,
-    isContratoMarco: true
+    isContratoMarco: true,
+    projectionYears
   }
 }
