@@ -126,8 +126,7 @@ export function useFormData() {
       ...prev,
       calculationType: type,
       serviceType: type === 'service' ? prev.serviceType || 'rotodinamico' : null,
-      equipment: type === 'product' ? { modelId: null, customPrice: null } : prev.equipment,
-      currentStep: 1
+      equipment: type === 'product' ? { modelId: null, customPrice: null } : prev.equipment
     }))
   }, [])
 
@@ -178,6 +177,12 @@ export function useFormData() {
     setCurrentStep(1)
   }, [])
 
+  const loadAnalysis = useCallback((analysis) => {
+    if (!analysis || !analysis.formData) return
+    setFormData(analysis.formData)
+    setCurrentStep(analysis.currentStep || 1)
+  }, [])
+
   const isContratoMarco = formData.calculationType === 'service' && formData.serviceType === 'contrato_marco'
 
   const getInvestment = useCallback(() => {
@@ -191,7 +196,8 @@ export function useFormData() {
       const val = formData.contratoMarco.annualContractValue
       return val && val > 0 ? (formData.currency === 'COP' ? val * 1_000_000 : val) : 0
     } else {
-      return formData.rotodynamic.serviceValue || 0
+      const val = formData.rotodynamic.serviceValue
+      return val && val > 0 ? (formData.currency === 'COP' ? val * 1_000_000 : val) : 0
     }
   }, [formData.equipment, formData.rotodynamic.serviceValue, formData.contratoMarco, formData.calculationType, formData.currency, isContratoMarco])
 
@@ -257,6 +263,47 @@ export function useFormData() {
     }
   }, [formData, getInvestment, isContratoMarco])
 
+  const getFormCompletion = useCallback(() => {
+    const sections = {}
+    
+    // Client section
+    const clientFields = Object.values(formData.client)
+    const clientFilled = clientFields.filter(v => v !== '' && v !== null).length
+    sections.client = Math.round((clientFilled / clientFields.length) * 100)
+    
+    // Equipment / Service section
+    if (formData.calculationType === 'product') {
+      sections.investment = formData.equipment.modelId !== null || formData.equipment.customPrice ? 100 : 0
+    } else if (isContratoMarco) {
+      sections.investment = formData.contratoMarco.annualContractValue !== null ? 100 : 0
+    } else {
+      const rotodynamicBasic = [
+        formData.rotodynamic.serviceValue,
+        formData.rotodynamic.turbineType,
+        formData.rotodynamic.numTurbines,
+        formData.rotodynamic.nominalCapacity
+      ]
+      const filled = rotodynamicBasic.filter(v => v !== null && v !== '').length
+      sections.investment = Math.round((filled / rotodynamicBasic.length) * 100)
+    }
+
+    // Operational section
+    if (formData.calculationType === 'product' || isContratoMarco) {
+      const opsFields = ['totalAssets', 'costPerHourStop', 'monthlyBilling']
+      const filled = opsFields.filter(f => formData.operational[f] !== null).length
+      sections.operational = Math.round((filled / opsFields.length) * 100)
+    } else {
+      const opsFields = ['costPerHourStop', 'criticalFailures', 'avgStopDuration']
+      const filled = opsFields.filter(f => formData.rotodynamic[f] !== null).length
+      sections.operational = Math.round((filled / opsFields.length) * 100)
+    }
+
+    const totalWeights = Object.values(sections)
+    sections.overall = Math.round(totalWeights.reduce((a, b) => a + b, 0) / totalWeights.length) || 0
+    
+    return sections
+  }, [formData, isContratoMarco])
+
   return {
     formData,
     currentStep,
@@ -276,7 +323,9 @@ export function useFormData() {
     prevStep,
     goToStep,
     resetForm,
+    loadAnalysis,
     getInvestment,
-    getCompleteData
+    getCompleteData,
+    getFormCompletion
   }
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import { COLORS } from '../utils/constants'
+import { ArrowLeftIcon, ArrowRightIcon } from './Icons'
 
 export default function NavigationButtons({
   onPrev,
@@ -17,9 +18,10 @@ export default function NavigationButtons({
       {showPrev ? (
         <button
           onClick={onPrev}
-          className="px-6 py-3 rounded-lg border-2 border-navy-200 text-navy-600 font-medium hover:bg-navy-50 transition-all"
+          className="flex items-center gap-2 px-6 py-3 rounded-lg border-2 border-navy-200 text-navy-600 font-medium hover:bg-navy-50 transition-all"
         >
-          ← {prevLabel}
+          <ArrowLeftIcon className="w-4 h-4" />
+          <span>{prevLabel}</span>
         </button>
       ) : (
         <div />
@@ -29,22 +31,24 @@ export default function NavigationButtons({
         {showCalculate && (
           <button
             onClick={onCalculate}
-            className="px-8 py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition-all shadow-lg"
           >
-            Calcular ROI →
+            <span>Calcular ROI</span>
+            <ArrowRightIcon className="w-4 h-4 text-white" />
           </button>
         )}
         {showNext && (
           <button
             onClick={onNext}
             disabled={disabledNext}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
               disabledNext
-                ? 'bg-navy-100 text-navy-400 cursor-not-allowed'
-                : 'bg-navy-600 text-white hover:bg-navy-700 shadow-lg'
+                ? 'bg-green-600 text-white hover:bg-green-700 shadow-md'
+                : 'bg-amaq-brand text-white hover:bg-amaq-600 shadow-md'
             }`}
           >
-            {nextLabel} →
+            <span>{nextLabel}</span>
+            <ArrowRightIcon className="w-4 h-4 text-white" />
           </button>
         )}
       </div>

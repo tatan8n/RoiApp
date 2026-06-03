@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { COLORS } from '../utils/constants'
+import { WarningIcon } from './Icons'
 
 const DEFAULT_WEIGHTS = {
   f1: 15,
@@ -52,13 +53,15 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="glass-panel p-6 animate-fade-in relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amaq-400 to-amaq-600"></div>
+      
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-navy-900">Pesos de los Factores</h2>
+        <h2 className="text-xl font-bold text-amaq-700">Pesos de los Factores</h2>
         {!isEditing && (
           <button
             onClick={handleStartEdit}
-            className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-all"
+            className="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all font-semibold"
           >
             Editar Pesos
           </button>
@@ -66,12 +69,13 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
       </div>
 
       {showWarning && (
-        <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg">
-          <p className="text-amber-800 text-sm font-medium mb-2">
-            ⚠️ Advertencia Importante
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg animate-fade-in">
+          <p className="text-amber-800 text-sm font-bold mb-2 flex items-center gap-1.5">
+            <WarningIcon className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>Advertencia Importante</span>
           </p>
-          <p className="text-amber-700 text-xs">
-            Los pesos fueron definidos según literatura técnica y investigación documentada 
+          <p className="text-amber-800 text-xs leading-relaxed">
+            Los pesos fueron definidos según literatura técnica y la investigación documentada 
             en la metodología A-MAQ (DOE, McKinsey, PWC, industria). 
             <strong> Modificarlos puede afectar la precisión del análisis.</strong>
             <br /><br />
@@ -80,13 +84,13 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleSave}
-              className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700"
+              className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 font-semibold"
             >
               Sí, continuar editando
             </button>
             <button
               onClick={() => setShowWarning(false)}
-              className="px-3 py-1 text-xs bg-navy-100 text-navy-700 rounded hover:bg-navy-200"
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200 font-semibold"
             >
               No, cancelar
             </button>
@@ -97,7 +101,7 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
       <div className="space-y-3">
         {Object.entries(FACTOR_NAMES).map(([key, name]) => (
           <div key={key} className="flex items-center gap-4">
-            <span className="w-40 text-sm text-navy-700">{name}</span>
+            <span className="w-40 text-sm text-slate-800 font-semibold">{name}</span>
             <div className="flex-1">
               <input
                 type="range"
@@ -106,25 +110,25 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
                 value={localWeights[key]}
                 onChange={(e) => handleWeightChange(key, parseInt(e.target.value))}
                 disabled={!isEditing}
-                className="w-full h-2 bg-navy-200 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
               />
             </div>
-            <span className="w-12 text-right font-bold text-navy-700">
+            <span className="w-12 text-right font-bold text-slate-800">
               {localWeights[key]}%
             </span>
           </div>
         ))}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-navy-200">
+      <div className="mt-4 pt-4 border-t border-slate-200">
         <div className="flex items-center justify-between">
-          <span className="text-navy-700 font-medium">Total:</span>
+          <span className="text-slate-800 font-semibold">Total:</span>
           <span className={`font-bold text-lg ${totalWeight === 100 ? 'text-green-600' : 'text-red-600'}`}>
             {totalWeight}%
           </span>
         </div>
         {totalWeight !== 100 && (
-          <p className="text-red-500 text-xs mt-1">El total debe ser 100%</p>
+          <p className="text-red-600 text-xs mt-1 font-semibold">El total debe sumar exactamente 100%</p>
         )}
       </div>
 
@@ -132,17 +136,17 @@ export default function WeightsEditor({ weights = DEFAULT_WEIGHTS, onChange, isE
         <div className="flex justify-end gap-3 mt-4">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-all"
+            className="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all font-semibold"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={totalWeight !== 100}
-            className={`px-4 py-2 text-sm rounded-lg transition-all ${
+            className={`px-4 py-2 text-sm rounded-lg transition-all font-bold ${
               totalWeight !== 100
-                ? 'bg-navy-200 text-navy-400 cursor-not-allowed'
-                : 'bg-navy-600 text-white hover:bg-navy-700'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-amaq-700 text-white hover:bg-amaq-600 shadow-glow'
             }`}
           >
             Guardar Cambios

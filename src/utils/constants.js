@@ -65,61 +65,61 @@ export const SECTORS = [
 export const OPERATIONAL_SECTIONS = [
   {
     id: 'equipment',
-    title: 'Equipos',
+    title: 'Inventario de Equipos',
     icon: '🔧',
-    description: 'Cantidad de equipos en tu planta',
+    description: 'Cantidad total y equipos críticos de la planta',
     fields: ['totalAssets', 'criticalAssets']
   },
   {
     id: 'unplannedStops',
     title: 'Paros No Planificados',
     icon: '⚠️',
-    description: 'Pérdidas por fallas inesperadas',
+    description: 'Costo y frecuencia de las fallas inesperadas',
     fields: ['costPerHourStop', 'unplannedFailures', 'avgStopDuration']
   },
   {
     id: 'corrective',
     title: 'Mantenimiento Correctivo',
     icon: '🔨',
-    description: 'Costos de servicios técnicos externos',
+    description: 'Servicios técnicos externos contratados',
     fields: ['correctiveExternalCost', 'correctiveExternalCount']
   },
   {
     id: 'reactive',
     title: 'Mantenimiento Reactivo',
     icon: '⏱️',
-    description: 'Horas-hombre del equipo interno',
+    description: 'Horas-hombre del equipo interno de mantenimiento',
     fields: ['reactiveManHours', 'technicianMonthlySalary']
   },
   {
     id: 'inventoryScheduled',
-    title: 'Repuestos, Programados y Energía',
+    title: 'Repuestos, Paros Programados y Energía',
     icon: '📦',
-    description: 'Inventario, demoras, mantenimientos preventivos y energía',
+    description: 'Inventario, demoras, preventivos y consumo de energía',
     fields: ['sparePartsDelay', 'sparePartsInventoryCost', 'scheduledStopHours', 'scheduledStopCost', 'monthlyBilling', 'preventiveMaintenanceCost', 'unnecessaryPreventivePercentage', 'inducedFailureCost', 'annualEnergyCost']
   }
 ]
 
 export const OPERATIONAL_FIELDS = [
-  { id: 'totalAssets', label: 'Número total de equipos rotativos', unit: 'equipos', placeholder: 'Motores, bombas, ventiladores, turbinas', benchmarkHint: 'Típico: 50-500 equipos según tamaño de planta', step: '1' },
-  { id: 'criticalAssets', label: 'Equipos críticos (falla detiene producción)', unit: 'equipos', placeholder: 'Solo equipos cuya falla para línea/planta', benchmarkHint: 'Generalmente 5-15% del total de equipos', step: '1' },
-  { id: 'avgCriticalAssetValue', label: 'Valor promedio de reposición de un equipo crítico', unit: 'MM COP', placeholder: 'Ej: 50 (si cuesta 50 millones reemplazar uno)', isCurrency: true, benchmarkHint: 'Industria: 50-500 MM COP según tipo de equipo. Fuente: SMRP', step: '0.1' },
-  { id: 'costPerHourStop', label: 'Costo por hora de paro no planificado', unit: 'MM COP/hora', placeholder: 'Ej: 5 (si son 5 millones por hora)', isCurrency: true, benchmarkHint: 'Manufactura: 2-10 MM COP/h; Oil & Gas: 50-200 MM COP/h. Fuente: Aberdeen Group', step: '0.1' },
+  { id: 'totalAssets', label: 'Total de equipos rotativos', unit: 'equipos', placeholder: 'Motores, bombas, ventiladores, turbinas', benchmarkHint: 'Típico: 50-500 equipos según tamaño de planta', step: '1' },
+  { id: 'criticalAssets', label: 'Equipos críticos', unit: 'equipos', placeholder: 'Equipos cuya falla detiene la producción', benchmarkHint: 'Generalmente 5-15% del total de equipos', step: '1' },
+  { id: 'avgCriticalAssetValue', label: 'Valor de reposición por equipo crítico', unit: 'MM COP', placeholder: 'Ej: 50 (millones por equipo)', isCurrency: true, benchmarkHint: 'Industria: 50-500 MM COP según tipo de equipo. Fuente: SMRP', step: '0.1' },
+  { id: 'costPerHourStop', label: 'Costo por hora de paro no planificado', unit: 'MM COP/h', placeholder: 'Ej: 5 (millones por hora)', isCurrency: true, benchmarkHint: 'Manufactura: 2-10 MM COP/h; Oil & Gas: 50-200 MM COP/h. Fuente: Aberdeen Group', step: '0.1' },
   { id: 'unplannedFailures', label: 'Frecuencia de fallas no planificadas', unit: 'paros/año', placeholder: 'Promedio de eventos al año', benchmarkHint: 'Plantas sin predictivo: 3-5 fallas/año por cada 100 equipos. Fuente: DOE, SMRP', step: '0.5' },
-  { id: 'avgStopDuration', label: 'Duración promedio de cada paro', unit: 'horas', placeholder: 'Tiempo desde falla hasta restablecimiento', benchmarkHint: 'Típico: 2-8 horas según tipo de falla. Fuente: McKinsey', step: '0.5' },
-  { id: 'correctiveExternalCost', label: 'Costo promedio por intervención correctiva externa', unit: 'MM COP', placeholder: 'Ej: 3 (si son 3 millones por intervención)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del presupuesto anual de mantenimiento. Fuente: SMRP', step: '0.1' },
-  { id: 'correctiveExternalCount', label: 'Número de intervenciones correctivas externas al año', unit: 'intervenciones/año', placeholder: 'Cantidad de veces que se contrata servicio externo', benchmarkHint: 'Plantas sin predictivo: 5-15 intervenciones/año. Fuente: PwC', step: '1' },
+  { id: 'avgStopDuration', label: 'Duración promedio de cada paro', unit: 'horas', placeholder: 'Tiempo desde la falla hasta el restablecimiento', benchmarkHint: 'Típico: 2-8 horas según tipo de falla. Fuente: McKinsey', step: '0.5' },
+  { id: 'correctiveExternalCost', label: 'Costo promedio por intervención correctiva externa', unit: 'MM COP', placeholder: 'Ej: 3 (millones por intervención)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del presupuesto anual de mantenimiento. Fuente: SMRP', step: '0.1' },
+  { id: 'correctiveExternalCount', label: 'Intervenciones correctivas externas al año', unit: 'intervenciones/año', placeholder: 'Cantidad de veces que se contrata servicio externo', benchmarkHint: 'Plantas sin predictivo: 5-15 intervenciones/año. Fuente: PwC', step: '1' },
   { id: 'reactiveManHours', label: 'Horas-hombre mensuales en mantenimiento reactivo', unit: 'horas/mes', placeholder: 'Horas del equipo interno en reparar fallas', benchmarkHint: 'Plantas reactivas: 20-40% del tiempo de mantenimiento. Fuente: McKinsey', step: '1' },
-  { id: 'technicianMonthlySalary', label: 'Salario mensual básico de un técnico de mantenimiento', unit: 'MM COP/mes', placeholder: 'Ej: 2 (si gana 2 millones de pesos mensuales)', isCurrency: true, benchmarkHint: 'Colombia: 1.5-4 MM COP/mes según región y nivel. Fuente: DANE', step: '0.1' },
-  { id: 'sparePartsDelay', label: 'Días promedio de demora en repuestos críticos', unit: 'días', placeholder: 'Tiempo desde pedido hasta recepción', benchmarkHint: 'Sin gestión: 45-90 días; Con predictivo: 7-30 días. Fuente: SMRP, Aberdeen', step: '1' },
-  { id: 'sparePartsInventoryCost', label: 'Costo del inventario de repuestos críticos', unit: 'MM COP', placeholder: 'Ej: 50 (si son 50 millones en repuestos)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del valor total de reposición de activos. Fuente: SMRP, DOE', step: '0.1' },
+  { id: 'technicianMonthlySalary', label: 'Salario mensual de un técnico', unit: 'MM COP/mes', placeholder: 'Ej: 2 (millones de pesos mensuales)', isCurrency: true, benchmarkHint: 'Colombia: 1.5-4 MM COP/mes según región y nivel. Fuente: DANE', step: '0.1' },
+  { id: 'sparePartsDelay', label: 'Demora promedio en repuestos críticos', unit: 'días', placeholder: 'Tiempo desde pedido hasta recepción', benchmarkHint: 'Sin gestión: 45-90 días; Con predictivo: 7-30 días. Fuente: SMRP, Aberdeen', step: '1' },
+  { id: 'sparePartsInventoryCost', label: 'Costo del inventario de repuestos críticos', unit: 'MM COP', placeholder: 'Ej: 50 (millones en repuestos)', isCurrency: true, benchmarkHint: 'Referencia: 3-8% del valor total de reposición de activos. Fuente: SMRP, DOE', step: '0.1' },
   { id: 'scheduledStopHours', label: 'Horas de paro programado anuales', unit: 'horas/año', placeholder: 'Ventanas de mantenimiento preventivo', benchmarkHint: 'Típico: 200-600 horas/año. Fuente: DOE FEMP', step: '1' },
-  { id: 'scheduledStopCost', label: 'Costo por hora de paro programado', unit: 'MM COP/hora', placeholder: 'Ej: 3 (si son 3 millones por hora)', isCurrency: true, benchmarkHint: 'Similar al costo por hora de paro no planificado. Fuente: McKinsey', step: '0.1' },
-  { id: 'monthlyBilling', label: 'Facturación mensual aproximada', unit: 'MM COP/mes', placeholder: 'Ej: 1000 (si son mil millones mensuales)', isCurrency: true, benchmarkHint: 'Ingreso mensual de la planta. Se usa para estimar costo de riesgo (~2% anual). Fuente: PwC, DOE', step: '1' },
-  { id: 'preventiveMaintenanceCost', label: 'Costo anual de mantenimiento preventivo intrusivo', unit: 'MM COP/año', placeholder: 'Ej: 200 (si son 200 millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 2-6% del valor de reposición de activos por año. Fuente: SMRP, PwC', step: '1' },
-  { id: 'unnecessaryPreventivePercentage', label: '% de preventivos abiertos que están en buen estado', unit: '%', placeholder: 'Estimación técnica: 30-40% en plantas no optimizadas', benchmarkHint: 'Sin predictivo: 30-40%; Con predictivo: 10-15%. Fuente: DOE, McKinsey', step: '1' },
-  { id: 'inducedFailureCost', label: 'Costo anual de fallas inducidas por error humano', unit: 'MM COP/año', placeholder: 'Ej: 50 (si son 50 millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 5-15% del costo total de mantenimiento. Fuente: SMRP', step: '1' },
-  { id: 'annualEnergyCost', label: 'Costo anual de energía eléctrica de la planta', unit: 'MM COP/año', placeholder: 'Ej: 500 (si son 500 millones en energía al año)', isCurrency: true, benchmarkHint: 'Manufactura ligera: 3-8% de facturación; Intensiva: 15-40%. Fuente: DOE Motor Challenge', step: '1' }
+  { id: 'scheduledStopCost', label: 'Costo por hora de paro programado', unit: 'MM COP/h', placeholder: 'Ej: 3 (millones por hora)', isCurrency: true, benchmarkHint: 'Similar al costo por hora de paro no planificado. Fuente: McKinsey', step: '0.1' },
+  { id: 'monthlyBilling', label: 'Facturación mensual aproximada', unit: 'MM COP/mes', placeholder: 'Ej: 1000 (mil millones mensuales)', isCurrency: true, benchmarkHint: 'Ingreso mensual de la planta. Se usa para estimar costo de riesgo (~2% anual). Fuente: PwC, DOE', step: '1' },
+  { id: 'preventiveMaintenanceCost', label: 'Costo anual de mantenimiento preventivo', unit: 'MM COP/año', placeholder: 'Ej: 200 (millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 2-6% del valor de reposición de activos por año. Fuente: SMRP, PwC', step: '1' },
+  { id: 'unnecessaryPreventivePercentage', label: '% de preventivos innecesarios', unit: '%', placeholder: 'Típico: 30-40% en plantas no optimizadas', benchmarkHint: 'Sin predictivo: 30-40%; Con predictivo: 10-15%. Fuente: DOE, McKinsey', step: '1' },
+  { id: 'inducedFailureCost', label: 'Costo anual de fallas por error humano', unit: 'MM COP/año', placeholder: 'Ej: 50 (millones al año)', isCurrency: true, benchmarkHint: 'Referencia: 5-15% del costo total de mantenimiento. Fuente: SMRP', step: '1' },
+  { id: 'annualEnergyCost', label: 'Costo anual de energía eléctrica', unit: 'MM COP/año', placeholder: 'Ej: 500 (millones en energía al año)', isCurrency: true, benchmarkHint: 'Manufactura ligera: 3-8% de facturación; Intensiva: 15-40%. Fuente: DOE Motor Challenge', step: '1' }
 ]
 
 export const BENCHMARK_FIELDS = [
@@ -145,16 +145,16 @@ export const STEPS_CONFIG = [
 export const ROTODYNAMIC_SECTIONS = [
   {
     id: 'inventory',
-    title: 'Inventario y Capacidad',
+    title: 'Equipos y Capacidad',
     icon: '⚙️',
-    description: 'Datos de equipos rotodinámicos',
+    description: 'Datos de las turbinas o generadores',
     fields: ['numTurbines', 'technology', 'nominalCapacity', 'yearsOfOperation']
   },
   {
     id: 'failureParams',
     title: 'Parámetros de Falla',
     icon: '⚠️',
-    description: 'Costos y frecuencia de fallas',
+    description: 'Costos y frecuencia de paradas no programadas',
     fields: ['costPerHourStop', 'criticalFailures', 'avgStopDuration', 'mttr']
   },
   {
@@ -166,9 +166,9 @@ export const ROTODYNAMIC_SECTIONS = [
   },
   {
     id: 'efficiency',
-    title: 'Logística y Eficiencia',
+    title: 'Eficiencia y Combustible',
     icon: '📊',
-    description: 'Repuestos y eficiencia termodinámica',
+    description: 'Repuestos, eficiencia termodinámica y combustible',
     fields: ['sparePartsDelay', 'heatRateDesign', 'heatRateActual', 'fuelCost']
   }
 ]
@@ -213,22 +213,22 @@ export const TURBINE_TYPES = [
 ]
 
 export const ROTODYNAMIC_FIELDS = [
-  { id: 'numTurbines', label: 'Número de turbinas/generadores', unit: 'unidades', placeholder: 'Ej: 4', benchmarkHint: 'Típico: 1-8 turbinas por planta. Fuente: EPRI', step: '1' },
+  { id: 'numTurbines', label: 'Número de turbinas o generadores', unit: 'unidades', placeholder: 'Ej: 4', benchmarkHint: 'Típico: 1-8 turbinas por planta. Fuente: EPRI', step: '1' },
   { id: 'technology', label: 'Tecnología y marca', unit: 'texto', placeholder: 'Ej: GE Frame 7FA, Siemens SGT6-5000F', benchmarkHint: 'Marca y modelo de la turbina' },
   { id: 'nominalCapacity', label: 'Capacidad nominal por unidad', unit: 'MW', placeholder: 'Ej: 250', benchmarkHint: 'Gas: 100-600 MW; Vapor: 200-1000 MW; Hydro: 50-700 MW', step: '0.1' },
   { id: 'yearsOfOperation', label: 'Años de operación (edad del activo)', unit: 'años', placeholder: 'Ej: 15', benchmarkHint: 'Nueva: 0-2 años; Media vida: 10-20; Final vida: 25-40', step: '0.5' },
-  { id: 'costPerHourStop', label: 'Costo por hora de paro (margen de contribución perdido)', unit: '/hora', placeholder: 'Ej: 50000000', isCurrency: true, benchmarkHint: 'Basado en VENS: $2,600-14,400 USD/MWh según país. Fuente: EPRI, XM', step: '0.01' },
-  { id: 'criticalFailures', label: 'Frecuencia de fallas críticas (últimos 24 meses)', unit: 'eventos', placeholder: 'Ej: 3', benchmarkHint: 'EPRI: 0.5-3 fallas/año por turbina sin predictivo. Con predictivo: 0.2-1.0', step: '0.1' },
+  { id: 'costPerHourStop', label: 'Costo por hora de paro', unit: 'MM COP/h', placeholder: 'Ej: 50', isCurrency: true, benchmarkHint: 'Basado en margen de contribución perdido. Fuente: EPRI, XM', step: '0.01' },
+  { id: 'criticalFailures', label: 'Fallas críticas en los últimos 24 meses', unit: 'eventos', placeholder: 'Ej: 3', benchmarkHint: 'EPRI: 0.5-3 fallas/año por turbina sin predictivo. Con predictivo: 0.2-1.0', step: '0.1' },
   { id: 'avgStopDuration', label: 'Duración promedio de paros no programados', unit: 'horas', placeholder: 'Ej: 48', benchmarkHint: 'Gas: 24-120h; Vapor: 48-240h; Hydro: 8-72h. Con predictivo reduce 35-45%. Fuente: EPRI', step: '0.5' },
-  { id: 'mttr', label: 'MTTR Histórico (tiempo de rehabilitación)', unit: 'horas', placeholder: 'Ej: 72', benchmarkHint: 'Gas: 72-168h; Vapor: 120-360h; Hydro: 48-120h. Diagnóstico predictivo reduce MTTR 40%. Fuente: IEEE', step: '0.5' },
-  { id: 'externalInterventionCost', label: 'Costo promedio intervención externa de emergencia', unit: '', placeholder: 'Ej: 150000000', isCurrency: true, benchmarkHint: '4-5× costo de mantenimiento programado. Emergency premium 50-100%. Fuente: EPRI', step: '0.01' },
-  { id: 'reactiveManHours', label: 'HH anuales de mantenimiento reactivo', unit: 'horas/año', placeholder: 'Ej: 2400', benchmarkHint: 'Plantas reactivas: 20-40% del tiempo total. Con predictivo: 8-15%. Fuente: McKinsey', step: '1' },
-  { id: 'internalLaborCost', label: 'Costo hora-hombre interna (con prestaciones)', unit: '/hora', placeholder: 'Ej: 80000', isCurrency: true, benchmarkHint: 'Colombia: $50,000-120,000 COP/h con prestaciones. Fuente: DANE', step: '0.01' },
-  { id: 'billingAffected', label: 'Facturación afectada (multas/créditos energía no entregada)', unit: '/año', placeholder: 'Ej: 500000000', isCurrency: true, benchmarkHint: 'Penalizaciones o créditos por energía no suministrada. VENS Colombia: variable por sector. Fuente: XM, CREG', step: '0.01' },
-  { id: 'sparePartsDelay', label: 'Días promedio de demora en repuestos críticos', unit: 'días', placeholder: 'Ej: 60', benchmarkHint: 'Sin predictivo: 45-90 días; Con predictivo: 7-30 días. Piezas críticas: 8-24 semanas. Fuente: SMRP', step: '1' },
+  { id: 'mttr', label: 'MTTR (tiempo de reparación)', unit: 'horas', placeholder: 'Ej: 72', benchmarkHint: 'Gas: 72-168h; Vapor: 120-360h; Hydro: 48-120h. Predictivo reduce MTTR 40%. Fuente: IEEE', step: '0.5' },
+  { id: 'externalInterventionCost', label: 'Costo de intervención externa de emergencia', unit: 'MM COP', placeholder: 'Ej: 150', isCurrency: true, benchmarkHint: '4-5× costo de mantenimiento programado. Prima de emergencia 50-100%. Fuente: EPRI', step: '0.01' },
+  { id: 'reactiveManHours', label: 'Horas-hombre anuales de mantenimiento reactivo', unit: 'horas/año', placeholder: 'Ej: 2400', benchmarkHint: 'Plantas reactivas: 20-40% del tiempo total. Con predictivo: 8-15%. Fuente: McKinsey', step: '1' },
+  { id: 'internalLaborCost', label: 'Costo hora-hombre interna (con prestaciones)', unit: 'COP/h', placeholder: 'Ej: 80000', isCurrency: true, benchmarkHint: 'Colombia: $50,000-120,000 COP/h con prestaciones. Fuente: DANE', step: '0.01' },
+  { id: 'billingAffected', label: 'Facturación afectada por energía no entregada', unit: 'MM COP/año', placeholder: 'Ej: 500', isCurrency: true, benchmarkHint: 'Penalizaciones o créditos por energía no suministrada. VENS Colombia: variable por sector. Fuente: XM, CREG', step: '0.01' },
+  { id: 'sparePartsDelay', label: 'Demora promedio en repuestos críticos', unit: 'días', placeholder: 'Ej: 60', benchmarkHint: 'Sin predictivo: 45-90 días; Con predictivo: 7-30 días. Piezas críticas: 8-24 semanas. Fuente: SMRP', step: '1' },
   { id: 'heatRateDesign', label: 'Heat rate de diseño', unit: 'BTU/kWh', placeholder: 'Ej: 9500', benchmarkHint: 'Gas: 9,000-12,000; Vapor: 8,500-11,000; Hydro: N/A. Fuente: EPRI', step: '1' },
   { id: 'heatRateActual', label: 'Heat rate actual', unit: 'BTU/kWh', placeholder: 'Ej: 10200', benchmarkHint: 'Si actual > diseño: indica pérdida de eficiencia. Mejora típica 1-3% con mantenimiento predictivo. Fuente: EPRI', step: '1' },
-  { id: 'fuelCost', label: 'Costo de combustible', unit: '/kWh', placeholder: 'Ej: 150', isCurrency: true, benchmarkHint: 'Gas natural: $0.04-0.10 USD/kWh; Carbón: $0.02-0.06 USD/kWh. Combustible = 70% OPEX. Fuente: DOE', step: '0.001' }
+  { id: 'fuelCost', label: 'Costo de combustible', unit: 'COP/kWh', placeholder: 'Ej: 150', isCurrency: true, benchmarkHint: 'Gas natural: $0.04-0.10 USD/kWh; Carbón: $0.02-0.06 USD/kWh. Combustible = 70% OPEX. Fuente: DOE', step: '0.001' }
 ]
 
 export const ROTODYNAMIC_BENCHMARKS = {
@@ -241,7 +241,7 @@ export const ROTODYNAMIC_BENCHMARKS = {
 }
 
 export const ROTODYNAMIC_BENCHMARK_FIELDS = [
-  { id: 'reductionFailures', label: '% Reducción de lucro cesante (fillas evitadas)', weight: 15, default: 0.40, benchmark: '35-45% reducción (EPRI), hasta 73% en ciclo combinado' },
+  { id: 'reductionFailures', label: '% Reducción de lucro cesante (fallas evitadas)', weight: 15, default: 0.40, benchmark: '35-45% reducción (EPRI), hasta 73% en ciclo combinado' },
   { id: 'reductionHeatRate', label: '% Mejora en heat rate (eficiencia termodinámica)', weight: 12, default: 0.02, benchmark: '1-3% mejora (EPRI)' },
   { id: 'optimizationHH', label: '% Optimización de horas-hombre reactivas', weight: 10, default: 0.30, benchmark: '30% reducción en costos totales de labor' },
   { id: 'reductionDelays', label: '% Reducción de demoras por repuestos', weight: 8, default: 0.25, benchmark: '20-30% reducción en costos de inventario' },
@@ -279,3 +279,30 @@ export const CURRENCIES = [
   { id: 'COP', name: 'COP', symbol: '$', description: 'Pesos Colombianos' },
   { id: 'USD', name: 'USD', symbol: '$', description: 'Dólares Americanos' }
 ]
+
+/**
+ * Capacity factors by turbine type.
+ * Represents the fraction of time a turbine operates at nominal capacity.
+ */
+export const CAPACITY_FACTORS = { gas: 0.60, steam: 0.70, hydro: 0.45 }
+
+/**
+ * Realistic contribution margin per kWh by turbine type and currency.
+ * Replaces the old VENS × exchange rate math that produced absurd values.
+ */
+export const CONTRIBUTION_MARGIN_PER_KWH = {
+  COP: { gas: 350, steam: 280, hydro: 420 },
+  USD: { gas: 0.085, steam: 0.068, hydro: 0.10 }
+}
+
+/** Hard cap for ROI percentage to flag unrealistic results */
+export const MAX_REASONABLE_ROI = 1000
+
+/** Maximum savings as a fraction of annual revenue (30% sanity cap) */
+export const MAX_SAVINGS_PCT_OF_REVENUE = 0.30
+
+/**
+ * Useful life in years by turbine type.
+ * Used for asset deferral calculations instead of a hardcoded 15.
+ */
+export const USEFUL_LIFE_YEARS = { gas: 25, steam: 30, hydro: 50, default: 15 }

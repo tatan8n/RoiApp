@@ -7,8 +7,9 @@ import CertaintyMeter from '../components/CertaintyMeter'
 import { COLORS, EQUIPMENT_MODELS, SERVICE_TYPES } from '../utils/constants'
 import { formatCurrency } from '../utils/format'
 import { ROI_WARNING_THRESHOLD, ROI_DANGER_THRESHOLD } from '../utils/calculations'
+import { HomeIcon, ArrowLeftIcon, DocumentArrowDownIcon, ClockIcon, WarningIcon, LightbulbIcon, PresentationChartLineIcon, CalculatorIcon, WalletIcon, PercentIcon, SaveIcon } from '../components/Icons'
 
-export default function ResultsDashboard({ formData, results, onBack, onGoHome, onExportHTML }) {
+export default function ResultsDashboard({ formData, results, onBack, onGoHome, onExportHTML, onSave, onOpenSaveModal }) {
   const isProduct = formData.calculationType === 'product'
   const isService = formData.calculationType === 'service'
   const isRotodynamic = formData.serviceType === 'rotodinamico'
@@ -51,37 +52,50 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
           <div className="flex items-center gap-4">
             <button
               onClick={onGoHome}
-              className="flex items-center text-navy-600 hover:text-navy-800 p-2 rounded-lg hover:bg-navy-100 transition-all"
+              className="flex items-center justify-center text-slate-600 hover:text-slate-800 p-2.5 rounded-lg hover:bg-slate-100 transition-all border border-slate-200 bg-white shadow-sm"
               title="Volver al inicio"
             >
-              🏠
+              <HomeIcon className="w-5 h-5" />
             </button>
             <div>
               <button
                 onClick={onBack}
-                className="flex items-center text-navy-600 hover:text-navy-800 mb-2"
+                className="flex items-center gap-1.5 text-slate-600 hover:text-slate-800 mb-2 text-sm font-semibold transition-colors"
               >
-                ← Volver al formulario
+                <ArrowLeftIcon className="w-4 h-4" />
+                <span>Volver al formulario</span>
               </button>
-              <h1 className="text-2xl font-bold text-navy-900">
+              <h1 className="text-2xl font-bold text-slate-900">
                 Resultados del Análisis ROI
               </h1>
-              <p className="text-navy-500">
+              <p className="text-slate-600 text-sm font-medium">
                 {formData.client?.companyName || 'Cliente'} | {formData.client?.sector || 'Sector'}
                 {isService && selectedService && (
-                  <span className="ml-2 text-navy-600">
+                  <span className="ml-2 text-slate-600">
                     | {selectedService.name}
                   </span>
                 )}
               </p>
             </div>
           </div>
-          <button
-            onClick={onExportHTML}
-            className="px-5 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center gap-2"
-          >
-            🌐 Exportar HTML
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenSaveModal && (
+              <button
+                onClick={onOpenSaveModal}
+                className="px-4 py-3 rounded-lg font-bold text-amaq-700 bg-white border-2 border-amaq-500/40 hover:bg-amaq-50 hover:border-amaq-500 transition-all flex items-center gap-2 shadow-md"
+              >
+                <SaveIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Guardar</span>
+              </button>
+            )}
+            <button
+              onClick={onExportHTML}
+              className="px-5 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center gap-2"
+            >
+              <DocumentArrowDownIcon className="w-5 h-5 text-white" />
+              <span>Exportar HTML</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -90,35 +104,35 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
             value={`${results.roi?.toFixed(1) || 0}%`}
             subtitle={`Retorno en ${results.projectionYears || 5} años`}
             color={results.roi > 0 ? COLORS.success : COLORS.danger}
-            icon="📈"
+            icon={<PresentationChartLineIcon className="w-6 h-6" />}
           />
           <KPICard
             title="Payback"
             value={`${results.payback || 0}`}
-            subtitle="meses"
+            subtitle="meses para recuperar"
             color={COLORS.navy[600]}
-            icon="⏱️"
+            icon={<ClockIcon className="w-6 h-6" />}
           />
           <KPICard
             title="Beneficio/Costo"
             value={results.benefitCostRatio?.toFixed(2) || '0'}
             subtitle="Ratio B/C"
             color={results.benefitCostRatio > 1 ? COLORS.success : COLORS.warning}
-            icon="⚖️"
+            icon={<CalculatorIcon className="w-6 h-6" />}
           />
           <KPICard
             title="VAN"
             value={formatCurrencyValue(results.van)}
             subtitle="Valor Actual Neto"
             color={results.van > 0 ? COLORS.success : COLORS.danger}
-            icon="💰"
+            icon={<WalletIcon className="w-6 h-6" />}
           />
           <KPICard
             title="TIR"
             value={`${results.tir?.toFixed(1) || 0}%`}
             subtitle="Tasa Interna de Retorno"
             color={results.tir > (formData.financial?.discountRate * 100 || 12) ? COLORS.success : COLORS.warning}
-            icon="📊"
+            icon={<PercentIcon className="w-6 h-6" />}
           />
         </div>
 
@@ -131,7 +145,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         {roiWarning && (
           <div className={`mt-4 p-4 rounded-xl border ${results.roiSeverity === 'danger' ? 'bg-red-50 border-red-400' : 'bg-amber-50 border-amber-300'}`}>
             <div className="flex items-start">
-              <span className="text-xl mr-3">&#9888;&#65039;</span>
+              <WarningIcon className={`w-6 h-6 shrink-0 mr-3 ${results.roiSeverity === 'danger' ? 'text-red-600' : 'text-amber-600'}`} />
               <div>
                 <p className={`font-bold ${results.roiSeverity === 'danger' ? 'text-red-800' : 'text-amber-800'}`}>
                   {results.roiSeverity === 'danger'
@@ -151,7 +165,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         {results.savingsOverCap && (
           <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-xl">
             <div className="flex items-start">
-              <span className="text-xl mr-3">&#9888;&#65039;</span>
+              <WarningIcon className="w-6 h-6 text-amber-600 shrink-0 mr-3 mt-0.5" />
               <div>
                 <p className="text-amber-800 font-bold">Ahorro total desproporcionado</p>
                 <p className="text-amber-600 text-sm mt-1">
@@ -165,7 +179,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         {dominantFactors.length > 0 && (
           <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-xl">
             <div className="flex items-start">
-              <span className="text-xl mr-3">&#9888;&#65039;</span>
+              <WarningIcon className="w-6 h-6 text-amber-600 shrink-0 mr-3 mt-0.5" />
               <div>
                 <p className="text-amber-800 font-bold">Factor{dominantFactors.length > 1 ? 'es' : ''} dominante{dominantFactors.length > 1 ? 's' : ''} detectado{dominantFactors.length > 1 ? 's' : ''}</p>
                 <p className="text-amber-600 text-sm mt-1">
@@ -180,7 +194,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         {results.warnings && results.warnings.length > 0 && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl">
             <div className="flex items-start">
-              <span className="text-xl mr-3">&#128161;</span>
+              <LightbulbIcon className="w-6 h-6 text-blue-600 shrink-0 mr-3 mt-0.5" />
               <div>
                 <p className="text-blue-800 font-bold">Verificación de datos ingresados</p>
                 {results.warnings.map((warning, idx) => (
@@ -194,7 +208,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         {results.certainty < 70 && results.missingFields && results.missingFields.length > 0 && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl">
             <div className="flex items-start">
-              <span className="text-xl mr-3">&#128161;</span>
+              <LightbulbIcon className="w-6 h-6 text-blue-600 shrink-0 mr-3 mt-0.5" />
               <div>
                 <p className="text-blue-800 font-bold">Datos sugeridos para mejorar la certeza</p>
                 <p className="text-blue-600 text-sm mt-1">
@@ -216,7 +230,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
               <h3 className="font-bold text-navy-900">{getSelectedItemLabel()}</h3>
               <p className="text-lg text-navy-700">{getSelectedItemName()}</p>
               {results.manHourCost > 0 && (
-                <p className="text-xs text-navy-400 mt-1">
+                <p className="text-xs text-slate-600 mt-1 font-semibold">
                   Costo hora-hombre calculado: {formatCurrencyValue(results.manHourCost)}/h
                 </p>
               )}
@@ -291,16 +305,16 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
                                 </span>
                               )}
                             </p>
-                            <p className="text-sm text-navy-400">{factor.description}</p>
+                            <p className="text-sm text-slate-500 font-medium">{factor.description}</p>
                           </div>
                         </td>
 <td className="py-3 px-4 text-right text-navy-600 whitespace-nowrap">
                            {formatCurrencyValue(factor.baseValue)}
                          </td>
-                        <td className="py-3 px-4 text-right text-green-600 font-semibold whitespace-nowrap">
+                        <td className="py-3 px-4 text-right text-green-700 font-semibold whitespace-nowrap">
                            {formatCurrencyValue(factor.savings)}
                          </td>
-                        <td className="py-3 px-4 text-right text-green-500 whitespace-nowrap">
+                        <td className="py-3 px-4 text-right text-green-600 whitespace-nowrap font-medium">
                            {formatCurrencyValue(factor.savings / 12)}
                          </td>
                       </tr>
@@ -308,11 +322,11 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
                   })}
                 <tr className="bg-navy-50 font-bold">
                   <td className="py-3 px-4 text-navy-900">TOTAL</td>
-                  <td className="py-3 px-4 text-right text-navy-600 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right text-green-600 whitespace-nowrap">
+                  <td className="py-3 px-4 text-right text-navy-700 whitespace-nowrap">-</td>
+                  <td className="py-3 px-4 text-right text-green-700 whitespace-nowrap">
                     {formatCurrencyValue(results.totalSavings)}
                   </td>
-                  <td className="py-3 px-4 text-right text-green-500 whitespace-nowrap">
+                  <td className="py-3 px-4 text-right text-green-600 whitespace-nowrap">
                     {formatCurrencyValue(results.monthlySavings)}
                   </td>
                 </tr>
@@ -321,18 +335,29 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-4">
+        <div className="mt-6 flex flex-wrap justify-end gap-4">
           <button
             onClick={onBack}
-            className="px-6 py-3 bg-navy-100 text-navy-700 font-medium rounded-lg hover:bg-navy-200 transition-all"
+            className="px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-2 border border-slate-200"
           >
-            ← Modificar Datos
+            <ArrowLeftIcon className="w-4 h-4" />
+            <span>Modificar Datos</span>
           </button>
+          {onOpenSaveModal && (
+            <button
+              onClick={onOpenSaveModal}
+              className="px-6 py-3 rounded-lg font-bold text-amaq-700 bg-white border-2 border-amaq-500/40 hover:bg-amaq-50 hover:border-amaq-500 transition-all flex items-center gap-2 shadow-md"
+            >
+              <SaveIcon className="w-5 h-5" />
+              <span>Guardar análisis</span>
+            </button>
+          )}
           <button
             onClick={onExportHTML}
-            className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all shadow-lg"
+            className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center gap-2"
           >
-            🌐 Exportar Informe HTML
+            <DocumentArrowDownIcon className="w-5 h-5 text-white" />
+            <span>Exportar Informe HTML</span>
           </button>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { OPERATIONAL_SECTIONS, OPERATIONAL_FIELDS } from '../utils/constants'
 import CurrencyInput from './CurrencyInput'
+import FormattedNumberInput from './FormattedNumberInput'
+import { CogIcon, WarningIcon, ClockIcon, ArchiveBoxIcon, InfoIcon, ArrowDownIcon, LightbulbIcon, FactoryIcon } from './Icons'
 
 export default function OperationalForm({ data, onChange }) {
   const [expandedSection, setExpandedSection] = useState('equipment')
@@ -22,11 +24,6 @@ export default function OperationalForm({ data, onChange }) {
     setExpandedSection(expandedSection === sectionId ? null : sectionId)
   }
 
-  const isCurrencyField = (fieldId) => {
-    const field = OPERATIONAL_FIELDS.find(f => f.id === fieldId)
-    return field && (field.isCurrency || false)
-  }
-
   const renderField = (fieldId) => {
     const field = OPERATIONAL_FIELDS.find(f => f.id === fieldId)
     if (!field) return null
@@ -44,83 +41,93 @@ export default function OperationalForm({ data, onChange }) {
 
     return (
       <div key={field.id} className="mb-5">
-        <label className="block text-navy-800 font-medium mb-2 text-sm">
+        <label className="block text-slate-800 font-semibold mb-2 text-sm">
           {field.label}
-          <span className="text-navy-400 font-normal ml-2">({field.unit})</span>
+          <span className="text-slate-500 font-normal ml-2">({field.unit})</span>
         </label>
-        <div className="relative">
-          <input
-            type="number"
-            value={getFieldValue(field.id) ?? ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseFloat(e.target.value)
-              onChange(field.id, val)
-            }}
-            onFocus={() => setFocusedFieldId(field.id)}
-            onBlur={() => setFocusedFieldId(null)}
-            placeholder={field.placeholder}
-            className="w-full px-4 py-3 pr-14 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
-            step="any"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">
-            {field.unit}
-          </span>
-        </div>
+        <FormattedNumberInput
+          value={getFieldValue(field.id)}
+          onChange={(val) => onChange(field.id, val)}
+          placeholder={field.placeholder}
+          unitLabel={field.unit}
+          min="0"
+          onFocus={() => setFocusedFieldId(field.id)}
+          onBlur={() => setFocusedFieldId(null)}
+        />
         {focusedFieldId === field.id && (
-          <p className="text-xs text-navy-400 mt-1">Usa punto (.) como separador decimal</p>
+          <p className="text-xs text-slate-500 mt-1">Usa punto (.) como separador decimal</p>
         )}
         {field.benchmarkHint && focusedFieldId !== field.id && (
-          <p className="text-xs text-blue-500 mt-1 italic">{field.benchmarkHint}</p>
+          <p className="text-xs text-blue-600 mt-1 italic font-medium">{field.benchmarkHint}</p>
         )}
       </div>
     )
   }
 
+  const renderSectionIcon = (id) => {
+    switch (id) {
+      case 'equipment':
+        return <FactoryIcon className="w-8 h-8 text-amaq-700 shrink-0" />
+      case 'unplannedStops':
+        return <WarningIcon className="w-8 h-8 text-red-600 shrink-0" />
+      case 'corrective':
+        return <CogIcon className="w-8 h-8 text-amaq-700 shrink-0" />
+      case 'reactive':
+        return <ClockIcon className="w-8 h-8 text-amaq-700 shrink-0" />
+      case 'inventoryScheduled':
+        return <ArchiveBoxIcon className="w-8 h-8 text-amaq-700 shrink-0" />
+      default:
+        return <InfoIcon className="w-8 h-8 text-amaq-700 shrink-0" />
+    }
+  }
+
   const renderSection = (section) => {
     const isExpanded = expandedSection === section.id
     const progress = getSectionProgress(section)
-    const progressColor = progress === 100 ? 'bg-green-500' : progress > 0 ? 'bg-navy-400' : 'bg-navy-200'
+    const progressColor = progress.percent === 100 ? 'bg-green-600' : progress.percent > 0 ? 'bg-amaq-700' : 'bg-slate-200'
 
     return (
       <div key={section.id} className="mb-4">
         <div
           onClick={() => toggleSection(section.id)}
-          className="bg-white rounded-xl shadow-md cursor-pointer overflow-hidden hover:shadow-lg transition-shadow"
+          className={`glass-panel cursor-pointer overflow-hidden transition-all duration-300 ${isExpanded ? 'border-amaq-500 shadow-glow' : 'hover:border-amaq-400 hover:bg-slate-50'}`}
         >
-          <div className="flex items-center justify-between p-4 border-b border-navy-100">
+          <div className="flex items-center justify-between p-5 border-b border-slate-100">
             <div className="flex items-center space-x-4">
-              <span className="text-3xl">{section.icon}</span>
+              <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-inner">
+                {renderSectionIcon(section.id)}
+              </div>
               <div>
-                <h3 className="text-lg font-bold text-navy-900">{section.title}</h3>
-                <p className="text-navy-500 text-sm">{section.description}</p>
+                <h3 className="text-lg font-bold text-slate-900 tracking-wide">{section.title}</h3>
+                <p className="text-slate-500 text-sm mt-0.5">{section.description}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <span className="text-sm text-navy-500">{progress.filled}/{progress.total} preguntas</span>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="w-20 h-2 bg-navy-100 rounded-full overflow-hidden">
+            <div className="flex items-center space-x-5">
+              <div className="text-right hidden sm:block">
+                <span className="text-sm text-slate-500 font-semibold">{progress.filled}/{progress.total} contestadas</span>
+                <div className="flex items-center space-x-2 mt-1.5 justify-end">
+                  <div className="w-24 h-1.5 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                     <div
-                      className={`h-full ${progressColor} rounded-full transition-all duration-300`}
+                      className={`h-full ${progressColor} rounded-full transition-all duration-500 ease-out`}
                       style={{ width: `${progress.percent}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-navy-600">{progress.percent}%</span>
+                  <span className="text-xs font-bold text-slate-700 w-8 text-right">{progress.percent}%</span>
                 </div>
               </div>
-              <span className={`text-2xl text-navy-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                ▼
+              <span className={`text-xl text-amaq-700 transition-transform duration-300 bg-slate-50 w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 ${isExpanded ? 'rotate-180 bg-slate-100' : ''}`}>
+                <ArrowDownIcon className="w-4 h-4" />
               </span>
             </div>
           </div>
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isExpanded ? 'max-h-[2000px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+          className={`overflow-hidden transition-all duration-500 ease-in-out ${
+            isExpanded ? 'max-h-[2000px] opacity-100 mt-3 mb-6' : 'max-h-0 opacity-0'
           }`}
         >
-          <div className="bg-navy-50 rounded-xl p-6 border border-navy-100">
+          <div className="bg-white/40 rounded-2xl p-6 md:p-8 border border-slate-200 shadow-inner">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 items-end">
               {section.fields.map(renderField)}
             </div>
@@ -131,28 +138,35 @@ export default function OperationalForm({ data, onChange }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-navy-900 mb-2">
-          Datos Operativos de tu Planta
+    <div className="glass-panel p-8 relative overflow-hidden animate-fade-in">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amaq-400 to-amaq-600"></div>
+      
+      <div className="mb-8">
+        <h2 className="text-2xl font-black text-amaq-700 mb-3 flex items-center gap-3">
+          <FactoryIcon className="w-7 h-7 text-amaq-700 shrink-0" />
+          <span>Datos Operativos de la Planta</span>
         </h2>
-        <p className="text-navy-600">
-          Completa la información de tu operación. Si no conoces algún valor, puedes dejarlo en blanco — el ROI se calculará con los datos disponibles.
+        <p className="text-slate-600 font-medium">
+          Completa la información de tu operación. Si no conoces algún valor, puedes dejarlo en blanco — el ROI se calculará con los datos de referencia.
         </p>
       </div>
 
-      <div className="mb-6 p-4 bg-green-50 rounded-xl border border-green-200">
+      <div className="mb-8 p-5 bg-amaq-50 rounded-2xl border border-amaq-200 shadow-glow relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-32 h-32 bg-amaq-500/10 rounded-full blur-[40px] pointer-events-none"></div>
         <div className="flex items-start">
-          <span className="text-2xl mr-3">&#128161;</span>
-          <div>
-            <p className="text-green-800 font-medium">Nivel de Certeza</p>
-            <p className="text-green-600 text-sm mt-1">
+          <InfoIcon className="w-8 h-8 text-amaq-700 mr-4 shrink-0" />
+          <div className="relative z-10">
+            <p className="text-amaq-700 font-bold text-lg mb-1 tracking-wide">Nivel de Certeza</p>
+            <p className="text-slate-900 text-sm mb-3 leading-relaxed">
               Entre más campos completes, mayor será la certeza del cálculo del ROI.
               Los campos vacíos usarán valores de referencia de la industria.
             </p>
-            <p className="text-green-600 text-sm mt-2">
-              <strong>Nota:</strong> Los campos marcados como "MM COP" se ingresan en millones de pesos. Ejemplo: si el valor es 400 millones, escriba 400.
-            </p>
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
+              <p className="text-slate-800 text-xs font-semibold flex items-center gap-2">
+                <LightbulbIcon className="w-4 h-4 text-amaq-600 shrink-0" />
+                <span>Nota: Los campos marcados como "MM COP" se ingresan en millones de pesos. Ejemplo: si el valor es 400 millones, escriba 400.</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>

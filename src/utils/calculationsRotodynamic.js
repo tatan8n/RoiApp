@@ -1,4 +1,5 @@
-import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES } from './constants.js'
+import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES, CONTRIBUTION_MARGIN_PER_KWH, CAPACITY_FACTORS, USEFUL_LIFE_YEARS, MAX_REASONABLE_ROI } from './constants.js'
+import { validateResults } from './calculationValidator.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -13,16 +14,9 @@ const COP_EXCHANGE_RATE = 4000
 const NEW_TURBINE_LOSS_FACTOR = 0.01
 const MAX_HOURS_PER_YEAR = 8760
 
-function getTurbineVENS(turbineType) {
-  const turbine = TURBINE_TYPES.find(t => t.id === turbineType)
-  if (turbine?.benchmarks?.vens) {
-    return turbine.benchmarks.vens
-  }
-  return 5000
-}
-
 function isNewTurbine(data) {
-  return data.yearsOfOperation !== null && data.yearsOfOperation <= 2
+  if (data.yearsOfOperation === null || data.yearsOfOperation === undefined) return false
+  return data.yearsOfOperation <= 2
 }
 
 export function calculateRotodynamicFactors(data) {
@@ -102,17 +96,27 @@ export function calculateRotodynamicFactors(data) {
 
   const hasActualFailureData = criticalFailures !== null && avgStopDuration !== null && costPerHourStop !== null
   const hasCapacityData = nominalCapacity !== null
+  const isZeroHoursTurbine = (data.yearsOfOperation === 0 || data.yearsOfOperation === null) &&
+                             (criticalFailures === null || criticalFailures === 0) &&
+                             (avgStopDuration === null || avgStopDuration === 0)
+
+  const capacityFactor = data.capacityFactor || CAPACITY_FACTORS[turbineType] || 0.6
+  const effectiveHours = ANNUAL_OPERATING_HOURS * capacityFactor
 
   if (isNewTurbine(data)) {
-    const vens = getTurbineVENS(turbineType)
-    const vensPerKWh = currency === 'USD' ? vens / 1000 : (vens * COP_EXCHANGE_RATE) / 1000
+    const marginPerKWh = CONTRIBUTION_MARGIN_PER_KWH[currency]?.[turbineType] || CONTRIBUTION_MARGIN_PER_KWH[currency]?.gas || (currency === 'COP' ? 350 : 0.085)
 
-    if (hasCapacityData && vensPerKWh > 0) {
-      const annualEnergyKWh = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS
-      const annualLossKWh = annualEnergyKWh * NEW_TURBINE_LOSS_FACTOR
-      const estimatedAnnualLoss = annualLossKWh * vensPerKWh
+    const lossFactor = isZeroHoursTurbine && !data.yearsOfOperation ? NEW_TURBINE_LOSS_FACTOR * 0.5 : NEW_TURBINE_LOSS_FACTOR
+    const effectiveReduction = isZeroHoursTurbine
+      ? Math.min(reductionFailures, 0.20)
+      : reductionFailures
+
+    if (hasCapacityData && marginPerKWh > 0) {
+      const annualEnergyKWh = nominalCapacity * 1000 * effectiveHours
+      const annualLossKWh = annualEnergyKWh * lossFactor
+      const estimatedAnnualLoss = annualLossKWh * marginPerKWh
       factors.f1.baseValue = estimatedAnnualLoss
-      factors.f1.savings = factors.f1.baseValue * reductionFailures
+      factors.f1.savings = estimatedAnnualLoss * effectiveReduction
       factors.f1.answered = true
     }
   } else if (hasActualFailureData && criticalFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0) {
@@ -126,7 +130,7 @@ export function calculateRotodynamicFactors(data) {
     if (heatRateActual > heatRateDesign) {
       const deltaHeatRate = heatRateActual - heatRateDesign
       const capacityKWh = nominalCapacity * 1000
-      const annualGeneration = capacityKWh * ANNUAL_OPERATING_HOURS
+      const annualGeneration = capacityKWh * effectiveHours
       const heatRateDiffMMBTUperKWh = deltaHeatRate / 1_000_000
       factors.f2.baseValue = heatRateDiffMMBTUperKWh * annualGeneration * fuelCost
       factors.f2.savings = factors.f2.baseValue * reductionHeatRate
@@ -150,11 +154,14 @@ export function calculateRotodynamicFactors(data) {
   }
 
   if (numTurbines !== null && nominalCapacity !== null && numTurbines > 0 && nominalCapacity > 0) {
-    const assetValuePerMW = currency === 'USD' ? 1_000_000 : 4_000_000_000
+    const usefulLife = USEFUL_LIFE_YEARS[turbineType] || USEFUL_LIFE_YEARS.default
+    const assetValuePerMW = currency === 'USD' ? 800_000 : 3_200_000_000
     const assetValue = numTurbines * nominalCapacity * assetValuePerMW
-    const annualDeferral = assetValue / 15
+    const annualDeferral = assetValue / usefulLife
+    const deferralSavings = annualDeferral * extensionLife
+    const maxDeferral = assetValue * 0.05
     factors.f5.baseValue = annualDeferral
-    factors.f5.savings = annualDeferral * extensionLife
+    factors.f5.savings = Math.min(deferralSavings, maxDeferral)
     factors.f5.answered = true
   }
 
@@ -164,14 +171,15 @@ export function calculateRotodynamicFactors(data) {
     factors.f6.savings = safetySavingsYear * riskReduction
     factors.f6.answered = true
   } else if (hasCapacityData && nominalCapacity > 0) {
-    const vens = getTurbineVENS(turbineType)
-    const vensPerKWh = currency === 'USD' ? vens / 1000 : (vens * COP_EXCHANGE_RATE) / 1000
-    const annualEnergyKWh = nominalCapacity * 1000 * ANNUAL_OPERATING_HOURS
-    const annualLossKWh = annualEnergyKWh * 0.05
-    const estimatedBilling = annualLossKWh * vensPerKWh
+    const marginPerKWh = CONTRIBUTION_MARGIN_PER_KWH[currency]?.[turbineType] || CONTRIBUTION_MARGIN_PER_KWH[currency]?.gas || (currency === 'COP' ? 350 : 0.085)
+    const annualEnergyKWh = nominalCapacity * 1000 * effectiveHours
+    const lossFactor = isZeroHoursTurbine ? NEW_TURBINE_LOSS_FACTOR * 0.5 : 0.05
+    const annualLossKWh = annualEnergyKWh * lossFactor
+    const estimatedBilling = annualLossKWh * marginPerKWh
+    const effectiveRiskReduction = isZeroHoursTurbine ? 0.05 : riskReduction
     const safetySavingsYear = estimatedBilling * RISK_COST_FRACTION
     factors.f6.baseValue = safetySavingsYear
-    factors.f6.savings = safetySavingsYear * riskReduction
+    factors.f6.savings = safetySavingsYear * effectiveRiskReduction
     factors.f6.answered = true
   }
 
@@ -184,7 +192,7 @@ export function calculateRotodynamicTotalSavings(factors) {
   }, 0)
 }
 
-export function calculateRotodynamicROI(totalSavings, investment, projectionYears) {
+export function calculateRotodynamicROI(investment, totalSavings, projectionYears) {
   if (!investment || investment <= 0) return 0
   const totalBenefits = totalSavings * projectionYears
   return ((totalBenefits - investment) / investment) * 100
@@ -196,9 +204,9 @@ export function calculateRotodynamicPayback(investment, annualSavings) {
   return Math.round(paybackMonths * 10) / 10
 }
 
-export function calculateRotodynamicBenefitCostRatio(investment, annualSavings) {
+export function calculateRotodynamicBenefitCostRatio(investment, totalSavings, projectionYears) {
   if (!investment || investment <= 0) return 0
-  return annualSavings / investment
+  return (totalSavings * projectionYears) / investment
 }
 
 export function calculateRotodynamicVAN(annualSavings, investment, discountRate, years) {
@@ -210,6 +218,7 @@ export function calculateRotodynamicVAN(annualSavings, investment, discountRate,
 }
 
 export function calculateRotodynamicTIR(annualSavings, investment, years, guess = 0.1) {
+  if (annualSavings <= 0) return 0
   let rate = guess
   const tolerance = 0.0001
   const maxIterations = 100
@@ -304,9 +313,10 @@ export function calculateAllRotodynamic(data) {
   const projectionYears = data.projectionYears || 5
   const discountRate = data.discountRate || 0.12
 
-  const roi = calculateRotodynamicROI(investment, totalSavings, projectionYears)
+  let roi = calculateRotodynamicROI(investment, totalSavings, projectionYears)
+  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
   const payback = calculateRotodynamicPayback(investment, totalSavings)
-  const benefitCostRatio = calculateRotodynamicBenefitCostRatio(investment, totalSavings)
+  const benefitCostRatio = calculateRotodynamicBenefitCostRatio(investment, totalSavings, projectionYears)
 
   const van = calculateRotodynamicVAN(totalSavings, investment, discountRate, projectionYears)
   const tir = calculateRotodynamicTIR(totalSavings, investment, projectionYears)
@@ -320,27 +330,37 @@ export function calculateAllRotodynamic(data) {
 
   const warnings = []
   if (data.costPerHourStop > 0 && data.yearsOfOperation <= 2) {
-    const vens = getTurbineVENS(data.turbineType)
-    const maxReasonableStopCost = vens * 100
+    const maxReasonableStopCost = data.currency === 'COP'
+      ? data.nominalCapacity * 50_000_000
+      : data.nominalCapacity * 12_500
     if (data.costPerHourStop > maxReasonableStopCost) {
       warnings.push({
         type: 'extreme_value',
         field: 'costPerHourStop',
-        message: `El costo por hora de paro (${data.currency === 'USD' ? '$' : ''}${data.costPerHourStop.toLocaleString()}${data.currency === 'USD' ? ' USD' : ' MM COP'}/h) excede 100x el VENS típico (${vens} USD/MWh = ${vens * 0.001} USD/kWh). Verifique que el valor esté en la unidad correcta.`
+        message: `El costo por hora de paro (${data.currency === 'USD' ? '$' : ''}${data.costPerHourStop.toLocaleString()}${data.currency === 'USD' ? ' USD' : ' COP'}/h) excede el máximo razonable para la capacidad de la turbina. Verifique que el valor esté en la unidad correcta.`
       })
     }
   }
   if (investment > 0) {
-    const minInvestment = data.currency === 'USD' ? 1000 : 1_000_000_000
+    const minInvestment = data.currency === 'USD' ? 1000 : 4_000_000
     if (investment < minInvestment) {
       warnings.push({
         type: 'low_investment',
         field: 'serviceValue',
         message: data.currency === 'USD'
           ? `La inversión declarada ($${investment.toLocaleString()} USD) es muy baja para un servicio de diagnóstico rotodinámico. Se recomienda un valor mínimo de $1,000 USD para resultados más realistas.`
-          : `La inversión declarada (${(investment / 1_000_000).toFixed(0)} MM COP) es muy baja para un servicio de diagnóstico rotodinámico. Se recomienda un valor mínimo de 1,000 MM COP para resultados más realistas.`
+          : `La inversión declarada (${(investment / 1_000_000).toFixed(0)} MM COP) es muy baja para un servicio de diagnóstico rotodinámico. Se recomienda un valor mínimo de 4 MM COP para resultados más realistas.`
       })
     }
+  }
+  const isZeroHoursTurbineCheck = (data.yearsOfOperation === 0 || data.yearsOfOperation === null) &&
+    (data.criticalFailures === null || data.criticalFailures === 0) &&
+    (data.avgStopDuration === null || data.avgStopDuration === 0)
+  if (isZeroHoursTurbineCheck) {
+    warnings.push({
+      type: 'new_turbine_no_history',
+      message: 'Turbina sin horas de operación y sin historial de fallas — los ahorros proyectados usan estimaciones teóricas de la industria (EPRI, DOE). Para resultados más precisos, ingrese datos reales cuando estén disponibles.'
+    })
   }
 
   let savingsOverCap = false
@@ -356,7 +376,7 @@ export function calculateAllRotodynamic(data) {
 
   const projection = generateRotodynamicProjection(totalSavings, investment, projectionYears)
 
-  return {
+  const rawResults = {
     factors,
     totalSavings,
     investment,
@@ -379,6 +399,8 @@ export function calculateAllRotodynamic(data) {
     warnings,
     projectionYears
   }
+  
+  return validateResults(rawResults, data)
 }
 
 export { ROI_WARNING_THRESHOLD, ROI_DANGER_THRESHOLD }

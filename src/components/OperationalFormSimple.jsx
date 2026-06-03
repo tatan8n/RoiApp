@@ -1,5 +1,6 @@
 import React from 'react'
 import { OPERATIONAL_FIELDS } from '../utils/constants'
+import { FactoryIcon, LightbulbIcon } from './Icons'
 
 export default function OperationalForm({ data, onChange }) {
   const formatNumber = (value) => {
@@ -19,20 +20,22 @@ export default function OperationalForm({ data, onChange }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-navy-900 mb-2">
-        📊 Datos Operativos de tu Planta
+    <div className="glass-panel p-8 relative overflow-hidden animate-fade-in">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amaq-400 to-amaq-600"></div>
+      <h2 className="text-2xl font-black text-amaq-700 mb-2 flex items-center gap-3">
+        <FactoryIcon className="w-7 h-7 text-amaq-700 shrink-0" />
+        <span>Datos Operativos de tu Planta</span>
       </h2>
-      <p className="text-navy-600 mb-8">
+      <p className="text-slate-600 mb-8 font-medium">
         Ingresa la información de tu operación. Estos datos nos permiten calcular el ROI de tu inversión.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {OPERATIONAL_FIELDS.map((field) => (
           <div key={field.id} className="relative">
-            <label className="block text-navy-800 font-semibold mb-2">
+            <label className="block text-slate-700 font-semibold mb-2 text-sm tracking-wide">
               {field.label}
-              <span className="text-navy-400 font-normal text-sm ml-2">({field.unit})</span>
+              <span className="text-slate-600 font-medium text-sm ml-2">({field.unit})</span>
             </label>
             <div className="relative">
               <input
@@ -40,9 +43,9 @@ export default function OperationalForm({ data, onChange }) {
                 value={formatNumber(data[field.id])}
                 onChange={(e) => handleChange(field.id, e.target.value)}
                 placeholder={field.placeholder}
-                className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-lg"
+                className="w-full px-4 py-3 pr-12 rounded-xl border-2 border-slate-200 bg-white text-slate-900 focus:border-amaq-400 focus:bg-slate-50 focus:shadow-glow outline-none transition-all duration-300 shadow-inner text-lg"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-amaq-700 text-sm font-medium">
                 {field.unit}
               </span>
             </div>
@@ -50,12 +53,12 @@ export default function OperationalForm({ data, onChange }) {
         ))}
       </div>
 
-      <div className="mt-8 p-4 bg-navy-50 rounded-xl border border-navy-200">
+      <div className="mt-8 p-4 bg-amaq-50 rounded-xl border border-amaq-200">
         <div className="flex items-start">
-          <span className="text-2xl mr-3">💡</span>
+          <LightbulbIcon className="w-5 h-5 text-amaq-600 shrink-0 mr-3 mt-1" />
           <div>
-            <p className="text-navy-700 font-medium">¿No tienes estos datos exactos?</p>
-            <p className="text-navy-500 text-sm mt-1">
+            <p className="text-slate-800 font-bold">¿No tienes estos datos exactos?</p>
+            <p className="text-slate-600 text-sm mt-1 font-medium">
               Ingresa estimaciones aproximadas. Los cálculos funcionarán igualmente y podrás ajustar después.
             </p>
           </div>

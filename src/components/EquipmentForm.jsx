@@ -1,70 +1,70 @@
 import React from 'react'
 import { EQUIPMENT_MODELS } from '../utils/constants'
+import { CubeIcon, LightbulbIcon } from './Icons'
+import FormattedNumberInput from './FormattedNumberInput'
 
 function formatMM(value) {
   if (!value) return '$0'
   const millions = value / 1_000_000
-  return `$ ${millions.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`
+  return `$ ${millions.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`
 }
 
 export default function EquipmentForm({ data, onChange }) {
   const selectedModel = EQUIPMENT_MODELS.find(m => m.id === data.modelId)
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h2 className="text-xl font-bold text-navy-900 mb-6">Selección del Equipo</h2>
+    <div className="glass-panel p-8 relative overflow-hidden animate-fade-in">
+      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amaq-400 to-amaq-600"></div>
+      <h2 className="text-2xl font-black text-amaq-700 mb-8 flex items-center gap-3">
+        <CubeIcon className="w-7 h-7 text-amaq-700 shrink-0" />
+        <span>Selección del Equipo</span>
+      </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         {EQUIPMENT_MODELS.map(model => {
           const priceMM = model.price / 1_000_000
           return (
             <div
               key={model.id}
               onClick={() => onChange('modelId', model.id)}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
                 data.modelId === model.id
-                  ? 'border-navy-600 bg-navy-50'
-                  : 'border-navy-200 hover:border-navy-400'
+                  ? 'border-amaq-700 bg-amaq-50 shadow-glow transform -translate-y-1'
+                  : 'border-slate-200 bg-white/50 hover:border-amaq-500 hover:bg-slate-50/80'
               }`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-navy-900">{model.name}</h3>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  data.modelId === model.id ? 'bg-navy-600 text-white' : 'bg-navy-100 text-navy-600'
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-bold text-slate-900 tracking-wide">{model.name}</h3>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                  data.modelId === model.id ? 'bg-amaq-700 text-white shadow-glow' : 'bg-slate-50 text-amaq-700 border border-slate-200'
                 }`}>
                   {model.level}
                 </span>
               </div>
-              <p className="text-2xl font-bold text-navy-700">
-                $ {priceMM.toFixed(1)} <span className="text-sm font-normal text-navy-400">MM COP</span>
+              <p className="text-3xl font-black text-amaq-700">
+                $ {priceMM.toFixed(1)} <span className="text-sm font-semibold text-slate-600">MM COP</span>
               </p>
-              <p className="text-navy-400 text-sm mt-2">{model.features}</p>
+              <p className="text-slate-600 text-sm mt-3 leading-relaxed font-semibold">{model.features}</p>
             </div>
           )
         })}
       </div>
 
-      <div className="bg-navy-50 rounded-xl p-4 border border-navy-200">
-        <p className="text-navy-700 font-medium mb-3">Precio personalizado (en millones de pesos)</p>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-500 font-semibold">$</span>
-          <input
-            type="number"
-            value={data.customPrice ?? ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseFloat(e.target.value)
-              onChange('customPrice', val)
-            }}
-            placeholder="Ingrese precio si es diferente (en millones)"
-            step="any"
-            className="w-full pl-8 pr-20 py-3 rounded-xl border-2 border-navy-200 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none transition-all text-navy-900 text-base bg-white"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 text-sm bg-navy-50 px-2 py-1 rounded">
-            MM COP
-          </span>
-        </div>
-        <p className="text-navy-400 text-xs mt-2">
-          Precio seleccionado: <strong>{selectedModel ? formatMM(selectedModel.price) : '$0'} MM COP</strong>
+      <div className="bg-white/80 rounded-2xl p-6 border border-slate-200 shadow-inner relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-32 h-32 bg-amaq-600/10 rounded-full blur-[40px] pointer-events-none"></div>
+        <p className="text-slate-700 font-bold mb-3 tracking-wide text-sm uppercase">Precio personalizado</p>
+        <FormattedNumberInput
+          value={data.customPrice}
+          onChange={(val) => onChange('customPrice', val)}
+          placeholder="Ingrese precio si es diferente (en millones)"
+          unitLabel="MM COP"
+          min="0"
+          size="large"
+          className="bg-slate-50"
+        />
+        <p className="text-slate-600 text-xs mt-3 flex items-center gap-2 font-medium">
+          <LightbulbIcon className="w-4 h-4 text-amaq-600 shrink-0" />
+          <span>Precio base seleccionado: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{selectedModel ? formatMM(selectedModel.price) : '$0'} MM COP</strong></span>
         </p>
       </div>
     </div>

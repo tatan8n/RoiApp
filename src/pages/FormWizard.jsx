@@ -1,6 +1,7 @@
 import React from 'react'
 import { STEPS_CONFIG, ROTODYNAMIC_STEPS_CONFIG, CONTRATO_MARCO_STEPS_CONFIG } from '../utils/constants'
 import Header from '../components/Header'
+import { DocumentCheckIcon, CubeIcon, SaveIcon } from '../components/Icons'
 import StepIndicator from '../components/StepIndicator'
 import ClientForm from '../components/ClientForm'
 import EquipmentForm from '../components/EquipmentForm'
@@ -16,7 +17,7 @@ import { calculateAllRotodynamic } from '../utils/calculationsRotodynamic'
 import { downloadHTML } from '../utils/htmlExporter'
 import ServiceValueForm from '../components/ServiceValueForm'
 import ContractValueForm from '../components/ContractValueForm'
-
+import SaveModal from '../components/SaveModal'
 export default function FormWizard({
   formData,
   currentStep,
@@ -32,25 +33,44 @@ export default function FormWizard({
   prevStep,
   getCompleteData,
   getInvestment,
-  onGoHome
+  getFormCompletion,
+  onGoHome,
+  onSaveAnalysis,
+  pendingResults,
+  setPendingResults
 }) {
   const [results, setResults] = React.useState(null)
   const [showResults, setShowResults] = React.useState(false)
+  const [horizonOverride, setHorizonOverride] = React.useState(24)
+  const [showSaveModal, setShowSaveModal] = React.useState(false)
 
   const isProduct = formData.calculationType === 'product'
   const isService = formData.calculationType === 'service'
   const isRotodynamic = formData.serviceType === 'rotodinamico'
   const isContratoMarco = isService && formData.serviceType === 'contrato_marco'
 
+  React.useEffect(() => {
+    if (pendingResults) {
+      setResults(pendingResults)
+      setShowResults(true)
+      setPendingResults && setPendingResults(null)
+    }
+  }, [])
+
   const handleCalculate = () => {
-    const data = getCompleteData()
+    const baseData = getCompleteData()
     let calcResults
-    if (isRotodynamic) {
-      calcResults = calculateAllRotodynamic(data)
-    } else if (isContratoMarco) {
-      calcResults = calculateAllContratoMarco(data)
+
+    if (isContratoMarco) {
+      calcResults = calculateAllContratoMarco(baseData)
     } else {
-      calcResults = calculateAll(data)
+      const projectionYears = Math.max(1, Math.floor(horizonOverride / 12))
+      const data = { ...baseData, projectionYears }
+      if (isRotodynamic) {
+        calcResults = calculateAllRotodynamic(data)
+      } else {
+        calcResults = calculateAll(data)
+      }
     }
     setResults(calcResults)
     setShowResults(true)
@@ -58,6 +78,21 @@ export default function FormWizard({
 
   const handleBackToForm = () => {
     setShowResults(false)
+  }
+
+  const handleHorizonChange = (horizonMonths) => {
+    setHorizonOverride(horizonMonths)
+    if (results) {
+      const projectionYears = Math.max(1, Math.floor(horizonMonths / 12))
+      const baseData = getCompleteData()
+      let calcResults
+      if (isRotodynamic) {
+        calcResults = calculateAllRotodynamic({ ...baseData, projectionYears })
+      } else {
+        calcResults = calculateAll({ ...baseData, projectionYears })
+      }
+      setResults(calcResults)
+    }
   }
 
   const handleExportHTML = () => {
@@ -103,13 +138,26 @@ export default function FormWizard({
 
   if (showResults) {
     return (
-      <ResultsDashboard
-        formData={formData}
-        results={results}
-        onBack={handleBackToForm}
-        onGoHome={onGoHome}
-        onExportHTML={handleExportHTML}
-      />
+      <>
+        <ResultsDashboard
+          formData={formData}
+          results={results}
+          onBack={handleBackToForm}
+          onGoHome={onGoHome}
+          onExportHTML={handleExportHTML}
+          onHorizonChange={handleHorizonChange}
+          onOpenSaveModal={() => setShowSaveModal(true)}
+        />
+        <SaveModal
+          isOpen={showSaveModal}
+          onClose={() => setShowSaveModal(false)}
+          onSave={(name) => {
+            const result = onSaveAnalysis && onSaveAnalysis(name)
+            if (result) setShowSaveModal(false)
+          }}
+          defaultName={formData.client?.contactName || ''}
+        />
+      </>
     )
   }
 
@@ -133,46 +181,49 @@ export default function FormWizard({
   const showEquipmentAndClient = currentStep === 1
 
   return (
-    <div className="min-h-screen bg-navy-50">
+    <div className="min-h-screen bg-slate-50">
       <Header onGoHome={onGoHome} />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="w-full max-w-6xl mx-auto">
         {isService && (
-          <div className="mb-4 p-3 bg-navy-100 rounded-lg border border-navy-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🔍</span>
-              <span className="text-navy-700 font-medium">
-                Servicio seleccionado: <strong>
+          <div className="mb-6 p-4 glass-panel flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
+            <div className="flex flex-wrap items-center gap-3">
+              <DocumentCheckIcon className="w-5 h-5 text-amaq-700 shrink-0" />
+              <span className="text-slate-900 font-medium tracking-wide">
+                Servicio: <strong className="text-amaq-700">
                   {formData.serviceType === 'rotodinamico' ? 'Análisis Rotodinámico' : 'Contrato Marco'}
                 </strong>
               </span>
               {formData.currency && (
-                <span className="text-navy-500 text-sm ml-2">
-                  | Moneda: {formData.currency === 'USD' ? 'USD' : 'COP (Millones)'}
+                <span className="text-slate-600 text-sm ml-2 px-3 py-1 bg-slate-50/50 rounded-full border border-slate-200 font-medium">
+                  Moneda: <span className="text-amaq-700 font-bold">{formData.currency === 'USD' ? 'USD' : 'COP (Millones)'}</span>
                 </span>
               )}
             </div>
             <button
-              onClick={() => onGoHome()}
-              className="text-sm text-navy-500 hover:text-navy-700 underline"
+              onClick={() => setShowSaveModal(true)}
+              className="px-4 py-2 rounded-lg text-sm font-bold text-amaq-700 bg-white border-2 border-amaq-500/40 hover:bg-amaq-50 hover:border-amaq-500 transition-all flex items-center gap-2 whitespace-nowrap"
             >
-              Cambiar selección
+              <SaveIcon className="w-4 h-4" />
+              <span>Guardar análisis</span>
             </button>
           </div>
         )}
         {isProduct && (
-          <div className="mb-4 p-3 bg-navy-100 rounded-lg border border-navy-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📦</span>
-              <span className="text-navy-700 font-medium">
-                Producto seleccionado: <strong>Colectores de Vibración</strong>
+          <div className="mb-6 p-4 glass-panel flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
+            <div className="flex items-center gap-3">
+              <CubeIcon className="w-5 h-5 text-amaq-700 shrink-0" />
+              <span className="text-slate-900 font-medium tracking-wide">
+                Producto: <strong className="text-amaq-700">Colectores de Vibración</strong>
               </span>
             </div>
             <button
-              onClick={() => onGoHome()}
-              className="text-sm text-navy-500 hover:text-navy-700 underline"
+              onClick={() => setShowSaveModal(true)}
+              className="px-4 py-2 rounded-lg text-sm font-bold text-amaq-700 bg-white border-2 border-amaq-500/40 hover:bg-amaq-50 hover:border-amaq-500 transition-all flex items-center gap-2 whitespace-nowrap"
             >
-              Cambiar selección
+              <SaveIcon className="w-4 h-4" />
+              <span>Guardar análisis</span>
             </button>
           </div>
         )}
@@ -200,8 +251,8 @@ export default function FormWizard({
                 />
               )}
               {isService && !isRotodynamic && !isContratoMarco && (
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <p className="text-navy-600">
+                <div className="glass-panel p-6 text-center">
+                  <p className="text-slate-500 text-lg">
                     Selecciona un tipo de servicio para continuar.
                   </p>
                 </div>
@@ -259,10 +310,10 @@ export default function FormWizard({
           )}
 
           {currentStep === 5 && isService && isContratoMarco && (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-navy-900 mb-4">Resumen del Contrato Marco</h2>
-              <p className="text-navy-600">
-                Haz clic en "Calcular ROI" para ver los resultados.
+            <div className="glass-panel p-8 text-center animate-fade-in">
+              <h2 className="text-2xl font-black text-amaq-700 mb-4">Resumen del Contrato Marco</h2>
+              <p className="text-slate-500 text-lg">
+                Todos los datos han sido recopilados. Haz clic en "Calcular ROI" para visualizar las proyecciones.
               </p>
             </div>
           )}
@@ -276,6 +327,17 @@ export default function FormWizard({
           nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
         />
       </div>
+    </div>
+
+      <SaveModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={(name) => {
+          const result = onSaveAnalysis && onSaveAnalysis(name)
+          if (result) setShowSaveModal(false)
+        }}
+        defaultName={formData.client?.contactName || ''}
+      />
     </div>
   )
 }

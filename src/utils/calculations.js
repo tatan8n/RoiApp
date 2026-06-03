@@ -1,4 +1,5 @@
-import { DEFAULT_BENCHMARKS } from './constants.js'
+import { DEFAULT_BENCHMARKS, MAX_REASONABLE_ROI } from './constants.js'
+import { validateResults } from './calculationValidator.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -170,13 +171,7 @@ export function calculateFactors(data) {
     factors.f3.answered = true
   }
 
-  if (sparePartsDelay !== null && sparePartsDelay > 0 && costPerHourStop !== null && costPerHourStop > 0 && unplannedFailures !== null && unplannedFailures > 0 && avgStopDuration !== null && avgStopDuration > 0) {
-    const delayCost = avgStopDuration * costPerHourStop * unplannedFailures * (sparePartsDelay / 365)
-    const inventorySavings = sparePartsInventoryCost * reductionDelays
-    factors.f4.baseValue = delayCost + sparePartsInventoryCost
-    factors.f4.savings = delayCost * reductionDelays + inventorySavings
-    factors.f4.answered = true
-  } else if (sparePartsInventoryCost !== null && sparePartsInventoryCost > 0) {
+  if (sparePartsInventoryCost !== null && sparePartsInventoryCost > 0) {
     factors.f4.baseValue = sparePartsInventoryCost
     factors.f4.savings = sparePartsInventoryCost * reductionDelays
     factors.f4.answered = true
@@ -194,7 +189,8 @@ export function calculateFactors(data) {
   }
 
   if (criticalAssets !== null && criticalAssets > 0 && avgCriticalAssetValue !== null && avgCriticalAssetValue > 0) {
-    const annualDeferral = criticalAssets * avgCriticalAssetValue / 15
+    const validCriticalAssets = totalAssets > 0 ? Math.min(criticalAssets, totalAssets) : criticalAssets
+    const annualDeferral = validCriticalAssets * avgCriticalAssetValue / 15
     factors.f6.baseValue = annualDeferral
     factors.f6.savings = annualDeferral * extensionLife
     factors.f6.answered = true
@@ -229,9 +225,7 @@ export function calculateFactors(data) {
     factors.f10.answered = true
   }
 
-  factors._meta = { manHourCost }
-
-  return factors
+  return { factors, _meta: { manHourCost } }
 }
 
 export function calculateTotalSavings(factors) {
@@ -266,6 +260,7 @@ export function calculateVAN(annualSavings, investment, discountRate, years) {
 }
 
 export function calculateTIR(annualSavings, investment, years, guess = 0.1) {
+  if (annualSavings <= 0) return 0
   let rate = guess
   const tolerance = 0.0001
   let maxIterations = 100
@@ -369,22 +364,22 @@ export function generateProjection(annualSavings, investment, years) {
 }
 
 export function calculateAll(data) {
-  const factors = calculateFactors(data)
+  const { factors, _meta } = calculateFactors(data)
   const totalSavings = calculateTotalSavings(factors)
   const investment = data.investment || 0
 
   const discountRate = data.discountRate || 0.12
   const projectionYears = data.projectionYears || 5
 
-  const roi = calculateROI(investment, totalSavings, projectionYears)
+  let roi = calculateROI(investment, totalSavings, projectionYears)
+  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
   const payback = calculatePayback(investment, totalSavings)
   const benefitCostRatio = calculateBenefitCostRatio(investment, totalSavings, projectionYears)
 
   const van = calculateVAN(totalSavings, investment, discountRate, projectionYears)
   const tir = calculateTIR(totalSavings, investment, projectionYears)
 
-  const manHourCost = factors._meta?.manHourCost || 0
-  delete factors._meta
+  const manHourCost = _meta?.manHourCost || 0
 
   const certainty = calculateCertainty(factors)
   const certaintyInfo = getCertaintyLevel(certainty)
@@ -409,7 +404,7 @@ export function calculateAll(data) {
 
   const projection = generateProjection(totalSavings, investment, projectionYears)
 
-  return {
+  const rawResults = {
     factors,
     totalSavings,
     investment,
@@ -431,10 +426,12 @@ export function calculateAll(data) {
     manHourCost,
     projectionYears
   }
+  
+  return validateResults(rawResults, data)
 }
 
 export function calculateAllContratoMarco(data) {
-  const factors = calculateFactors(data)
+  const { factors, _meta } = calculateFactors(data)
   const totalSavings = calculateTotalSavings(factors)
   const investment = data.investment || 0
   const annualContractValue = data.annualContractValue || 0
@@ -462,9 +459,10 @@ export function calculateAllContratoMarco(data) {
     van += yearlyNetFlows[i] / Math.pow(1 + discountRate, i + 1)
   }
 
-  const tir = calculateTIR(totalSavingsSum - annualContractValue, annualContractValue, projectionYears)
+  const tir = calculateTIR(totalSavings - annualContractValue, annualContractValue, projectionYears)
 
-  const roi = totalPayments > 0 ? ((totalSavingsSum - totalPayments) / totalPayments) * 100 : 0
+  let roi = totalPayments > 0 ? ((totalSavingsSum - totalPayments) / totalPayments) * 100 : 0
+  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
 
   const payback = calculatePayback(annualContractValue, totalSavings)
 
@@ -494,17 +492,16 @@ export function calculateAllContratoMarco(data) {
     : 0
   if (monthlyBilling > 0) {
     const annualBilling = monthlyBilling * 12
-    const savingsPct = totalSavingsSum / annualBilling
+    const savingsPct = totalSavings / annualBilling
     if (savingsPct > MAX_SAVINGS_OF_REVENUE) {
       savingsOverCap = true
       savingsCapPct = (savingsPct * 100).toFixed(1)
     }
   }
 
-  const manHourCost = factors._meta?.manHourCost || 0
-  delete factors._meta
+  const manHourCost = _meta?.manHourCost || 0
 
-  return {
+  const rawResults = {
     factors,
     totalSavings: totalSavingsSum,
     investment: annualContractValue,
@@ -530,4 +527,6 @@ export function calculateAllContratoMarco(data) {
     isContratoMarco: true,
     projectionYears
   }
+  
+  return validateResults(rawResults, data)
 }
