@@ -3,3 +3,8 @@ dist
 .env
 *.log
 .DS_Store
+
+# Herramientas locales de agentes/skills (no son parte de la app)
+.agents/
+.claude/
+skills-lock.json
