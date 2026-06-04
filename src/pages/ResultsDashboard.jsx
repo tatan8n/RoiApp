@@ -4,6 +4,7 @@ import KPICard from '../components/KPICard'
 import BenefitsChart from '../components/BenefitsChart'
 import TimelineChart from '../components/TimelineChart'
 import CertaintyMeter from '../components/CertaintyMeter'
+import ResultsInterpretation from '../components/ResultsInterpretation'
 import { COLORS, EQUIPMENT_MODELS, SERVICE_TYPES } from '../utils/constants'
 import { formatCurrency } from '../utils/format'
 import { ROI_WARNING_THRESHOLD, ROI_DANGER_THRESHOLD } from '../utils/calculations'
@@ -42,6 +43,14 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
   const roiWarning = results.roiWarning || false
   const answeredFactors = Object.values(results.factors).filter(f => f.answered)
   const totalSavings = results.totalSavings
+
+  // Formateadores null-safe: un valor null significa "no calculable" (p. ej. inversión
+  // inválida o TIR no definida) y se muestra como "N/A", distinto de un cero real.
+  const roiDisplay = results.roi === null || results.roi === undefined ? 'N/A' : `${results.roi.toFixed(1)}%`
+  const paybackDisplay = results.payback === null || results.payback === undefined ? 'N/A' : `${results.payback}`
+  const bcrDisplay = results.benefitCostRatio === null || results.benefitCostRatio === undefined ? 'N/A' : results.benefitCostRatio.toFixed(2)
+  const tirDisplay = results.tir === null || results.tir === undefined ? 'N/A' : `${results.tir.toFixed(1)}%`
+  const discountRatePct = (formData.financial?.discountRate || 0.12) * 100
 
   return (
     <div className="min-h-screen bg-navy-50">
@@ -101,21 +110,21 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <KPICard
             title="ROI"
-            value={`${results.roi?.toFixed(1) || 0}%`}
+            value={roiDisplay}
             subtitle={`Retorno en ${results.projectionYears || 5} años`}
             color={results.roi > 0 ? COLORS.success : COLORS.danger}
             icon={<PresentationChartLineIcon className="w-6 h-6" />}
           />
           <KPICard
             title="Payback"
-            value={`${results.payback || 0}`}
-            subtitle="meses para recuperar"
+            value={paybackDisplay}
+            subtitle={results.payback === null || results.payback === undefined ? 'No se recupera' : 'meses para recuperar'}
             color={COLORS.navy[600]}
             icon={<ClockIcon className="w-6 h-6" />}
           />
           <KPICard
             title="Beneficio/Costo"
-            value={results.benefitCostRatio?.toFixed(2) || '0'}
+            value={bcrDisplay}
             subtitle="Ratio B/C"
             color={results.benefitCostRatio > 1 ? COLORS.success : COLORS.warning}
             icon={<CalculatorIcon className="w-6 h-6" />}
@@ -129,9 +138,9 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
           />
           <KPICard
             title="TIR"
-            value={`${results.tir?.toFixed(1) || 0}%`}
+            value={tirDisplay}
             subtitle="Tasa Interna de Retorno"
-            color={results.tir > (formData.financial?.discountRate * 100 || 12) ? COLORS.success : COLORS.warning}
+            color={results.tir > discountRatePct ? COLORS.success : COLORS.warning}
             icon={<PercentIcon className="w-6 h-6" />}
           />
         </div>
@@ -334,6 +343,8 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
             </table>
           </div>
         </div>
+
+        <ResultsInterpretation results={results} formData={formData} />
 
         <div className="mt-6 flex flex-wrap justify-end gap-4">
           <button

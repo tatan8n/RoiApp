@@ -25,6 +25,7 @@ function App() {
     updateCurrency,
     updateRotodynamic,
     updateContratoMarco,
+    applyInferredFields,
     nextStep,
     prevStep,
     getCompleteData,
@@ -143,6 +144,7 @@ function App() {
         updateFinancial={updateFinancial}
         updateRotodynamic={updateRotodynamic}
         updateContratoMarco={updateContratoMarco}
+        applyInferredFields={applyInferredFields}
         nextStep={nextStep}
         prevStep={prevStep}
         getCompleteData={getCompleteData}

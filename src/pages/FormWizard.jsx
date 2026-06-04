@@ -18,6 +18,8 @@ import { downloadHTML } from '../utils/htmlExporter'
 import ServiceValueForm from '../components/ServiceValueForm'
 import ContractValueForm from '../components/ContractValueForm'
 import SaveModal from '../components/SaveModal'
+import AIAssistant from '../components/AIAssistant'
+import { SparklesIcon } from '../components/Icons'
 export default function FormWizard({
   formData,
   currentStep,
@@ -29,6 +31,7 @@ export default function FormWizard({
   updateFinancial,
   updateRotodynamic,
   updateContratoMarco,
+  applyInferredFields,
   nextStep,
   prevStep,
   getCompleteData,
@@ -41,7 +44,11 @@ export default function FormWizard({
 }) {
   const [results, setResults] = React.useState(null)
   const [showResults, setShowResults] = React.useState(false)
-  const [horizonOverride, setHorizonOverride] = React.useState(24)
+  const [showAssistant, setShowAssistant] = React.useState(false)
+  // Inicializa el horizonte del slider de resultados a partir del valor elegido por el
+  // usuario en el formulario financiero (antes estaba fijo en 24 meses = 2 años, lo que
+  // ignoraba la selección del usuario).
+  const [horizonOverride, setHorizonOverride] = React.useState((formData.financial?.projectionYears || 5) * 12)
   const [showSaveModal, setShowSaveModal] = React.useState(false)
 
   const isProduct = formData.calculationType === 'product'
@@ -64,7 +71,9 @@ export default function FormWizard({
     if (isContratoMarco) {
       calcResults = calculateAllContratoMarco(baseData)
     } else {
-      const projectionYears = Math.max(1, Math.floor(horizonOverride / 12))
+      // El horizonte de proyección lo define el usuario en el formulario financiero.
+      const projectionYears = formData.financial?.projectionYears || 5
+      setHorizonOverride(projectionYears * 12)
       const data = { ...baseData, projectionYears }
       if (isRotodynamic) {
         calcResults = calculateAllRotodynamic(data)
@@ -86,7 +95,9 @@ export default function FormWizard({
       const projectionYears = Math.max(1, Math.floor(horizonMonths / 12))
       const baseData = getCompleteData()
       let calcResults
-      if (isRotodynamic) {
+      if (isContratoMarco) {
+        calcResults = calculateAllContratoMarco({ ...baseData, projectionYears })
+      } else if (isRotodynamic) {
         calcResults = calculateAllRotodynamic({ ...baseData, projectionYears })
       } else {
         calcResults = calculateAll({ ...baseData, projectionYears })
@@ -103,36 +114,10 @@ export default function FormWizard({
   }
 
   const handleNext = () => {
-    if (isProduct) {
-      if (currentStep === 3) {
-        handleCalculate()
-      } else if (currentStep === 4) {
-        nextStep()
-      } else {
-        nextStep()
-      }
-    } else if (isRotodynamic) {
-      if (currentStep === 2) {
-        nextStep()
-      } else if (currentStep === 3) {
-        handleCalculate()
-      } else {
-        nextStep()
-      }
-    } else if (isContratoMarco) {
-      if (currentStep === 4) {
-        handleCalculate()
-      } else {
-        nextStep()
-      }
+    if (currentStep === 4) {
+      handleCalculate()
     } else {
-      if (currentStep === 2) {
-        nextStep()
-      } else if (currentStep === 3) {
-        handleCalculate()
-      } else {
-        nextStep()
-      }
+      nextStep()
     }
   }
 
@@ -185,7 +170,21 @@ export default function FormWizard({
       <Header onGoHome={onGoHome} />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="w-full max-w-6xl mx-auto">
+        <div className="flex gap-6 items-start">
+        <div className="flex-1 min-w-0 w-full max-w-6xl mx-auto">
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => setShowAssistant(s => !s)}
+            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all border-2 ${
+              showAssistant
+                ? 'bg-amaq-600 text-white border-amaq-600 shadow-md'
+                : 'bg-white text-amaq-700 border-amaq-500/40 hover:bg-amaq-50 hover:border-amaq-500'
+            }`}
+          >
+            <SparklesIcon className="w-4 h-4" />
+            <span>{showAssistant ? 'Ocultar Asistente IA' : 'Llenar con Asistente IA'}</span>
+          </button>
+        </div>
         {isService && (
           <div className="mb-6 p-4 glass-panel flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
             <div className="flex flex-wrap items-center gap-3">
@@ -323,11 +322,21 @@ export default function FormWizard({
           onPrev={prevStep}
           onNext={handleNext}
           showPrev={currentStep > 1}
-          showNext={currentStep < (isProduct ? 4 : isRotodynamic ? 4 : isContratoMarco ? 5 : 3)}
-          nextLabel={currentStep === (isProduct ? 4 : isRotodynamic ? 3 : isContratoMarco ? 4 : 3) && isService ? 'Calcular ROI' : 'Siguiente'}
+          showNext={currentStep <= 4}
+          nextLabel={currentStep === 4 ? 'Calcular ROI' : 'Siguiente'}
         />
+        </div>
+        {showAssistant && (
+          <AIAssistant
+            formData={formData}
+            calculationType={formData.calculationType}
+            serviceType={formData.serviceType}
+            applyInferredFields={applyInferredFields}
+            onClose={() => setShowAssistant(false)}
+          />
+        )}
+        </div>
       </div>
-    </div>
 
       <SaveModal
         isOpen={showSaveModal}

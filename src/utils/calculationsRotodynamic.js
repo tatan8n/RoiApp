@@ -1,5 +1,5 @@
 import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES, CONTRIBUTION_MARGIN_PER_KWH, CAPACITY_FACTORS, USEFUL_LIFE_YEARS, MAX_REASONABLE_ROI } from './constants.js'
-import { validateResults } from './calculationValidator.js'
+import { validateResults, validateInputData } from './calculationValidator.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -103,7 +103,12 @@ export function calculateRotodynamicFactors(data) {
   const capacityFactor = data.capacityFactor || CAPACITY_FACTORS[turbineType] || 0.6
   const effectiveHours = ANNUAL_OPERATING_HOURS * capacityFactor
 
-  if (isNewTurbine(data)) {
+  // CORRECCIÓN: priorizar datos reales de fallas sobre la estimación teórica.
+  // Antes, una turbina "nueva" (≤2 años) usaba siempre la estimación de la industria
+  // aunque el usuario hubiera ingresado fallas reales, subestimando gravemente el lucro
+  // cesante. Ahora la estimación teórica solo se usa cuando NO hay historial real.
+  const hasRealFailureHistory = criticalFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0
+  if (isNewTurbine(data) && !hasRealFailureHistory) {
     const marginPerKWh = CONTRIBUTION_MARGIN_PER_KWH[currency]?.[turbineType] || CONTRIBUTION_MARGIN_PER_KWH[currency]?.gas || (currency === 'COP' ? 350 : 0.085)
 
     const lossFactor = isZeroHoursTurbine && !data.yearsOfOperation ? NEW_TURBINE_LOSS_FACTOR * 0.5 : NEW_TURBINE_LOSS_FACTOR
@@ -193,19 +198,21 @@ export function calculateRotodynamicTotalSavings(factors) {
 }
 
 export function calculateRotodynamicROI(investment, totalSavings, projectionYears) {
-  if (!investment || investment <= 0) return 0
+  // null = no calculable (inversión inválida), distinto de un ROI real de 0%.
+  if (!investment || investment <= 0) return null
   const totalBenefits = totalSavings * projectionYears
   return ((totalBenefits - investment) / investment) * 100
 }
 
 export function calculateRotodynamicPayback(investment, annualSavings) {
   if (!annualSavings || annualSavings <= 0) return null
+  if (!investment || investment <= 0) return null
   const paybackMonths = investment / (annualSavings / 12)
   return Math.round(paybackMonths * 10) / 10
 }
 
 export function calculateRotodynamicBenefitCostRatio(investment, totalSavings, projectionYears) {
-  if (!investment || investment <= 0) return 0
+  if (!investment || investment <= 0) return null
   return (totalSavings * projectionYears) / investment
 }
 
@@ -307,6 +314,8 @@ export function generateRotodynamicProjection(annualSavings, investment, years) 
 }
 
 export function calculateAllRotodynamic(data) {
+  const inputValidation = validateInputData({ ...data }, 'rotodinamico')
+
   const factors = calculateRotodynamicFactors(data)
   const totalSavings = calculateRotodynamicTotalSavings(factors)
   const investment = data.investment || 0
@@ -314,7 +323,7 @@ export function calculateAllRotodynamic(data) {
   const discountRate = data.discountRate || 0.12
 
   let roi = calculateRotodynamicROI(investment, totalSavings, projectionYears)
-  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
+  if (roi !== null && roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
   const payback = calculateRotodynamicPayback(investment, totalSavings)
   const benefitCostRatio = calculateRotodynamicBenefitCostRatio(investment, totalSavings, projectionYears)
 
@@ -325,10 +334,28 @@ export function calculateAllRotodynamic(data) {
   const certaintyInfo = getRotodynamicCertaintyLevel(certainty)
   const missingFields = getRotodynamicMissingFields(factors)
   const dominantFactors = getRotodynamicDominantFactors(factors, totalSavings)
-  const roiWarning = roi > ROI_WARNING_THRESHOLD
-  const roiSeverity = roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null
+  const roiWarning = roi !== null && roi > ROI_WARNING_THRESHOLD
+  const roiSeverity = roi !== null && roi > ROI_DANGER_THRESHOLD ? 'danger' : (roi !== null && roi > ROI_WARNING_THRESHOLD ? 'warning' : null)
 
-  const warnings = []
+  const warnings = [...(inputValidation.warnings || [])]
+
+  // Heat rate actual < diseño: probable error de captura (antes se ignoraba en silencio).
+  if (data.heatRateDesign > 0 && data.heatRateActual > 0 && data.heatRateActual < data.heatRateDesign) {
+    warnings.push({
+      type: 'heat_rate_inverted',
+      field: 'heatRateActual',
+      message: `El heat rate actual (${data.heatRateActual}) es menor que el de diseño (${data.heatRateDesign}). Esto implicaría que la turbina es más eficiente que su diseño, lo cual es inusual. Verifique los valores; el ahorro por eficiencia (f2) no se calculó.`
+    })
+  }
+
+  // MTTR mayor que la duración promedio del paro: inconsistencia lógica.
+  if (data.mttr > 0 && data.avgStopDuration > 0 && data.mttr > data.avgStopDuration) {
+    warnings.push({
+      type: 'mttr_inconsistent',
+      field: 'mttr',
+      message: `El MTTR (${data.mttr}h) supera la duración promedio del paro (${data.avgStopDuration}h). El MTTR debería ser menor o igual a la duración total del paro. Revise los datos.`
+    })
+  }
   if (data.costPerHourStop > 0 && data.yearsOfOperation <= 2) {
     const maxReasonableStopCost = data.currency === 'COP'
       ? data.nominalCapacity * 50_000_000

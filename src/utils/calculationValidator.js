@@ -33,7 +33,34 @@ export function validateInputData(data, calcType) {
       data[field] = 0
     }
   })
-  
+
+  // Validar rango de benchmarks (deben estar entre 0 y 1). Valores negativos o > 1
+  // producen ahorros negativos o ROI invertido. Se hace clamp y se avisa.
+  if (data.benchmarks && typeof data.benchmarks === 'object') {
+    Object.keys(data.benchmarks).forEach(key => {
+      const v = data.benchmarks[key]
+      if (typeof v === 'number' && (v < 0 || v > 1)) {
+        const clamped = Math.max(0, Math.min(1, v))
+        adjustments.push({ field: `benchmarks.${key}`, from: v, to: clamped, reason: 'Los factores de mejora deben estar entre 0% y 100%.' })
+        warnings.push({ field: key, severity: 'warning', message: `El factor "${key}" (${(v * 100).toFixed(0)}%) está fuera del rango 0–100%. Se ajustó a ${(clamped * 100).toFixed(0)}%.` })
+        data.benchmarks[key] = clamped
+      }
+    })
+  }
+
+  // Demora de repuestos mayor a un año: el factor rotodinámico f4 divide entre 365.
+  if (data.sparePartsDelay > 365) {
+    warnings.push({ field: 'sparePartsDelay', severity: 'warning', message: `La demora de repuestos (${data.sparePartsDelay} días) supera un año. Verifique el valor; un valor tan alto distorsiona el cálculo de demoras.` })
+  }
+
+  // Para Contrato Marco: facturación anual menor que el valor del contrato.
+  if (calcType === 'contrato_marco' && data.annualContractValue > 0 && data.monthlyBilling > 0) {
+    const annualBilling = data.monthlyBilling * 12
+    if (annualBilling < data.annualContractValue) {
+      warnings.push({ field: 'annualContractValue', severity: 'warning', message: 'El valor anual del contrato supera la facturación anual estimada de la planta. Verifique que ambos valores estén en la misma unidad.' })
+    }
+  }
+
   return { isValid: warnings.filter(w => w.severity === 'error').length === 0, warnings, adjustments, data }
 }
 

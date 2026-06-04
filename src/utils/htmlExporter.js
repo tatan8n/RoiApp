@@ -52,6 +52,15 @@ export function generateHTML(formData, results) {
   const currencySuffix = currency === 'USD' ? ' USD' : ' COP'
   const currencyLabelChart = currency === 'USD' ? 'USD' : 'COP'
 
+  // Display null-safe: null = "N/A" (no calculable), distinto de un cero real.
+  const isNil = (v) => v === null || v === undefined
+  const roiHtml = isNil(results.roi) ? 'N/A' : `${results.roi.toFixed(1)}%`
+  const paybackHtml = isNil(results.payback) ? 'N/A' : `${results.payback}`
+  const bcrHtml = isNil(results.benefitCostRatio) ? 'N/A' : results.benefitCostRatio.toFixed(2)
+  const tirHtml = isNil(results.tir) ? 'N/A' : `${results.tir.toFixed(1)}%`
+  const discountPct = ((formData.financial?.discountRate ?? 0.12) * 100)
+  const discountPctLabel = discountPct.toFixed(0)
+
   const factors = results.factors || {}
   const factorsData = Object.values(factors)
     .filter(f => f && f.answered)
@@ -134,17 +143,17 @@ export function generateHTML(formData, results) {
 
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="value" style="color: ${results.roi > 0 ? '#4ade80' : '#f87171'}">${results.roi?.toFixed(1) || 0}%</div>
+        <div class="value" style="color: ${results.roi > 0 ? '#4ade80' : '#f87171'}">${roiHtml}</div>
         <div class="title">ROI</div>
         <div class="subtitle">Retorno en ${results.projectionYears || 5} años</div>
       </div>
       <div class="kpi-card">
-        <div class="value" style="color: #38bdf8">${results.payback || 0}</div>
+        <div class="value" style="color: #38bdf8">${paybackHtml}</div>
         <div class="title">Payback</div>
-        <div class="subtitle">Meses</div>
+        <div class="subtitle">${isNil(results.payback) ? 'No se recupera' : 'Meses'}</div>
       </div>
       <div class="kpi-card">
-        <div class="value" style="color: ${results.benefitCostRatio > 1 ? '#4ade80' : '#fbbf24'}">${results.benefitCostRatio?.toFixed(2) || '0'}</div>
+        <div class="value" style="color: ${results.benefitCostRatio > 1 ? '#4ade80' : '#fbbf24'}">${bcrHtml}</div>
         <div class="title">Beneficio/Costo</div>
         <div class="subtitle">Ratio B/C</div>
       </div>
@@ -154,7 +163,7 @@ export function generateHTML(formData, results) {
         <div class="subtitle">Valor Actual Neto</div>
       </div>
       <div class="kpi-card">
-        <div class="value" style="color: ${results.tir > 12 ? '#4ade80' : '#fbbf24'}">${results.tir?.toFixed(1) || 0}%</div>
+        <div class="value" style="color: ${results.tir > discountPct ? '#4ade80' : '#fbbf24'}">${tirHtml}</div>
         <div class="title">TIR</div>
         <div class="subtitle">Tasa Interna de Retorno</div>
       </div>
@@ -322,6 +331,37 @@ export function generateHTML(formData, results) {
       </div>
     </div>
     ` : ''}
+
+    <div class="card">
+      <div class="card-title">¿Cómo interpretar estos resultados?</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="info-item">
+          <label>ROI (Retorno de la Inversión)</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Cuánto ganas en total frente a lo invertido en ${results.projectionYears || 5} años. Favorable: &gt; 0%. Excelente: &gt; 100%. Si supera ~300%, revisa los datos.</p>
+        </div>
+        <div class="info-item">
+          <label>Payback (Periodo de Recuperación)</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Meses en recuperar la inversión con los ahorros. Menor es mejor. "No se recupera" = los ahorros no cubren el costo en el horizonte.</p>
+        </div>
+        <div class="info-item">
+          <label>Beneficio / Costo (B/C)</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Pesos de beneficio por cada peso invertido. Favorable: &gt; 1. Muy atractivo: &gt; 2.</p>
+        </div>
+        <div class="info-item">
+          <label>VAN (Valor Actual Neto)</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Ahorros futuros traídos a pesos de hoy (descontados al ${discountPctLabel}% anual) menos la inversión. Favorable: &gt; 0.</p>
+        </div>
+        <div class="info-item">
+          <label>TIR (Tasa Interna de Retorno)</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Rentabilidad anual del proyecto. Favorable si supera tu tasa de descuento (${discountPctLabel}%). "N/A" cuando no es matemáticamente calculable.</p>
+        </div>
+        <div class="info-item">
+          <label>Certeza del Análisis</label>
+          <p style="font-size: 13px; color: #cbd5e1;">Qué tan completos están los datos. Alta: ≥ 80%. Media: 50–79%. Baja: &lt; 50% (interpreta con cautela).</p>
+        </div>
+      </div>
+      <p style="font-size: 11px; color: #64748b; margin-top: 16px;">Estimaciones basadas en los datos ingresados y benchmarks de la industria (DOE, SMRP, EPRI, McKinsey). Evalúa el conjunto de indicadores y la certeza antes de decidir.</p>
+    </div>
 
     <div class="footer">
       <p>Generado por ROI Calculator A-MAQ S.A. | Este reporte es confidencial y para uso exclusivo del cliente</p>

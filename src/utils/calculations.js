@@ -1,11 +1,12 @@
 import { DEFAULT_BENCHMARKS, MAX_REASONABLE_ROI } from './constants.js'
-import { validateResults } from './calculationValidator.js'
+import { validateResults, validateInputData } from './calculationValidator.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
 const RISK_COST_FRACTION = 0.02
 const MAX_SCHEDULED_SAVINGS_FRACTION = 0.05
-const MAX_SAVINGS_OF_REVENUE = 0.15
+// Alineado con MAX_SAVINGS_PCT_OF_REVENUE (validador) y con el mensaje de la UI ("supera el 30%").
+const MAX_SAVINGS_OF_REVENUE = 0.30
 
 const MILLIONS_FIELDS = [
   'costPerHourStop',
@@ -202,7 +203,15 @@ export function calculateFactors(data) {
     factors.f7.answered = true
   }
 
-  if (monthlyBilling !== null && monthlyBilling > 0) {
+  // f8 (Seguridad): CAMBIO DE MODELADO — antes se activaba con solo tener facturación,
+  // lo que inflaba el ROI sin relación con el riesgo real (escenario "facturación → ROI
+  // instantáneo"). Ahora exige evidencia de exposición a fallas (fallas no planificadas,
+  // fallas inducidas o intervenciones correctivas externas). Ver AUDITORIA_ROI.md.
+  const hasFailureExposure =
+    (unplannedFailures !== null && unplannedFailures > 0) ||
+    (inducedFailureCost !== null && inducedFailureCost > 0) ||
+    (correctiveExternalCount !== null && correctiveExternalCount > 0)
+  if (monthlyBilling !== null && monthlyBilling > 0 && hasFailureExposure) {
     const safetySavingsYear = monthlyBilling * 12 * RISK_COST_FRACTION
     factors.f8.baseValue = safetySavingsYear
     factors.f8.savings = safetySavingsYear * riskReduction
@@ -235,19 +244,22 @@ export function calculateTotalSavings(factors) {
 }
 
 export function calculateROI(investment, totalSavings, projectionYears) {
-  if (investment <= 0) return 0
+  // null = no calculable (inversión inválida). Se distingue de un ROI real de 0%.
+  if (investment <= 0) return null
   const totalBenefits = totalSavings * projectionYears
   return ((totalBenefits - investment) / investment) * 100
 }
 
 export function calculatePayback(investment, annualSavings) {
   if (annualSavings <= 0) return null
+  if (investment <= 0) return null
   const paybackMonths = investment / (annualSavings / 12)
   return Math.round(paybackMonths * 10) / 10
 }
 
 export function calculateBenefitCostRatio(investment, totalSavings, projectionYears) {
-  if (investment <= 0) return 0
+  // null = no calculable (inversión inválida), distinto de un ratio real de 0.
+  if (investment <= 0) return null
   return (totalSavings * projectionYears) / investment
 }
 
@@ -283,6 +295,43 @@ export function calculateTIR(annualSavings, investment, years, guess = 0.1) {
     if (rate > 10) rate = 10
   }
 
+  return rate * 100
+}
+
+/**
+ * TIR (IRR) sobre un arreglo de flujos de caja arbitrarios.
+ * flows[i] ocurre al final del año (i+1). `initialOutlay` es el desembolso en t=0.
+ * Devuelve null si los flujos no tienen cambio de signo (IRR no definida),
+ * por ejemplo un contrato recurrente sin inversión inicial cuyos flujos netos
+ * son todos del mismo signo.
+ */
+export function calculateIRRFromFlows(flows, initialOutlay = 0) {
+  const series = [-Math.abs(initialOutlay), ...flows]
+  const hasPositive = series.some(f => f > 0)
+  const hasNegative = series.some(f => f < 0)
+  if (!hasPositive || !hasNegative) return null
+
+  let rate = 0.1
+  const tolerance = 0.0001
+  const maxIterations = 200
+
+  for (let i = 0; i < maxIterations; i++) {
+    let npv = 0
+    let dNpv = 0
+    for (let t = 0; t < series.length; t++) {
+      const denom = Math.pow(1 + rate, t)
+      npv += series[t] / denom
+      if (t > 0) dNpv -= (t * series[t]) / (denom * (1 + rate))
+    }
+    if (Math.abs(npv) < tolerance) break
+    if (dNpv === 0) break
+    let next = rate - npv / dNpv
+    if (next < -0.99) next = -0.99
+    if (next > 10) next = 10
+    rate = next
+  }
+
+  if (!isFinite(rate)) return null
   return rate * 100
 }
 
@@ -364,6 +413,8 @@ export function generateProjection(annualSavings, investment, years) {
 }
 
 export function calculateAll(data) {
+  const inputValidation = validateInputData({ ...data }, 'product')
+
   const { factors, _meta } = calculateFactors(data)
   const totalSavings = calculateTotalSavings(factors)
   const investment = data.investment || 0
@@ -372,7 +423,7 @@ export function calculateAll(data) {
   const projectionYears = data.projectionYears || 5
 
   let roi = calculateROI(investment, totalSavings, projectionYears)
-  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
+  if (roi !== null && roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
   const payback = calculatePayback(investment, totalSavings)
   const benefitCostRatio = calculateBenefitCostRatio(investment, totalSavings, projectionYears)
 
@@ -385,8 +436,8 @@ export function calculateAll(data) {
   const certaintyInfo = getCertaintyLevel(certainty)
   const missingFields = getMissingFields(factors)
   const dominantFactors = getDominantFactors(factors, totalSavings)
-  const roiWarning = roi > ROI_WARNING_THRESHOLD
-  const roiSeverity = roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null
+  const roiWarning = roi !== null && roi > ROI_WARNING_THRESHOLD
+  const roiSeverity = roi !== null && roi > ROI_DANGER_THRESHOLD ? 'danger' : (roi !== null && roi > ROI_WARNING_THRESHOLD ? 'warning' : null)
 
   let savingsOverCap = false
   let savingsCapPct = null
@@ -424,13 +475,16 @@ export function calculateAll(data) {
     projection,
     monthlySavings: totalSavings / 12,
     manHourCost,
+    warnings: inputValidation.warnings,
     projectionYears
   }
-  
+
   return validateResults(rawResults, data)
 }
 
 export function calculateAllContratoMarco(data) {
+  const inputValidation = validateInputData({ ...data }, 'contrato_marco')
+
   const { factors, _meta } = calculateFactors(data)
   const totalSavings = calculateTotalSavings(factors)
   const investment = data.investment || 0
@@ -444,9 +498,12 @@ export function calculateAllContratoMarco(data) {
     yearlyPayments.push(annualContractValue * Math.pow(1 + inflationRate, year))
   }
 
+  // CAMBIO DE MODELADO: los ahorros ahora inflan a la misma tasa que los pagos.
+  // Antes los ahorros eran planos mientras los pagos inflaban, sesgando el análisis
+  // a rechazar contratos que en realidad son favorables. Ver AUDITORIA_ROI.md.
   const yearlySavings = []
   for (let year = 0; year < projectionYears; year++) {
-    yearlySavings.push(totalSavings)
+    yearlySavings.push(totalSavings * Math.pow(1 + inflationRate, year))
   }
 
   let totalPayments = yearlyPayments.reduce((sum, p) => sum + p, 0)
@@ -459,14 +516,34 @@ export function calculateAllContratoMarco(data) {
     van += yearlyNetFlows[i] / Math.pow(1 + discountRate, i + 1)
   }
 
-  const tir = calculateTIR(totalSavings - annualContractValue, annualContractValue, projectionYears)
+  // TIR correcta: IRR sobre los flujos netos reales (no la anualidad constante mal
+  // formada anterior). En un contrato recurrente sin inversión inicial, si los flujos
+  // netos son todos del mismo signo la IRR no está definida y se reporta N/A.
+  const tir = calculateIRRFromFlows(yearlyNetFlows, 0)
 
-  let roi = totalPayments > 0 ? ((totalSavingsSum - totalPayments) / totalPayments) * 100 : 0
-  if (roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
+  let roi = totalPayments > 0 ? ((totalSavingsSum - totalPayments) / totalPayments) * 100 : null
+  if (roi !== null && roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
 
-  const payback = calculatePayback(annualContractValue, totalSavings)
+  // Payback coherente con la inflación: se modela el pago del primer año como desembolso
+  // inicial y se recupera con el flujo neto acumulado. Si nunca cruza a positivo → null
+  // ("No se recupera en el horizonte"), evitando el payback falso del cálculo anterior
+  // que solo miraba el primer año e ignoraba que los pagos escalan.
+  let payback = null
+  if (annualContractValue > 0) {
+    let cumulative = -yearlyPayments[0]
+    for (let i = 0; i < projectionYears; i++) {
+      const inflow = yearlySavings[i] - (i > 0 ? yearlyPayments[i] : 0)
+      const prev = cumulative
+      cumulative += inflow
+      if (cumulative >= 0 && inflow > 0) {
+        const fractionYear = prev >= 0 ? 0 : (-prev / inflow)
+        payback = Math.round((i + fractionYear) * 12 * 10) / 10
+        break
+      }
+    }
+  }
 
-  const benefitCostRatio = totalPayments > 0 ? totalSavingsSum / totalPayments : 0
+  const benefitCostRatio = totalPayments > 0 ? totalSavingsSum / totalPayments : null
 
   const projection = []
   let cumulative = -annualContractValue
@@ -524,9 +601,10 @@ export function calculateAllContratoMarco(data) {
     projection,
     monthlySavings: totalSavingsSum / 12,
     manHourCost,
+    warnings: inputValidation.warnings,
     isContratoMarco: true,
     projectionYears
   }
-  
+
   return validateResults(rawResults, data)
 }

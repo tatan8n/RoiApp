@@ -158,6 +158,36 @@ export function useFormData() {
     }))
   }, [])
 
+  // Aplica un objeto plano de campos inferidos por el asistente IA, con forma
+  // { "seccion.campo": valor }. Normaliza unidades de seguridad (porcentajes que
+  // lleguen como 50 en vez de 0.5) y deja el formulario manual como fuente de verdad.
+  const applyInferredFields = useCallback((flat) => {
+    if (!flat || typeof flat !== 'object') return
+    const decimalFractionPaths = new Set(['financial.discountRate', 'contratoMarco.inflationRate'])
+    setFormData(prev => {
+      const next = typeof structuredClone === 'function'
+        ? structuredClone(prev)
+        : JSON.parse(JSON.stringify(prev))
+      Object.entries(flat).forEach(([path, rawValue]) => {
+        if (rawValue === null || rawValue === undefined || rawValue === '') return
+        const [section, field] = path.split('.')
+        if (!section || !field) return
+        if (!(section in next) || typeof next[section] !== 'object' || next[section] === null) return
+        let value = rawValue
+        if (section === 'benchmarks' || section === 'rotodynamicBenchmarks') {
+          if (typeof value === 'number') {
+            if (value > 1) value = value / 100
+            value = Math.max(0, Math.min(1, value))
+          }
+        } else if (decimalFractionPaths.has(path)) {
+          if (typeof value === 'number' && value > 1) value = value / 100
+        }
+        next[section][field] = value
+      })
+      return next
+    })
+  }, [])
+
   const nextStep = useCallback(() => {
     setCurrentStep(prev => Math.min(prev + 1, 4))
   }, [])
@@ -319,6 +349,7 @@ export function useFormData() {
     updateCurrency,
     updateRotodynamic,
     updateContratoMarco,
+    applyInferredFields,
     nextStep,
     prevStep,
     goToStep,
