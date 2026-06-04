@@ -157,10 +157,14 @@ export default function AIAssistant({
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto bg-white space-y-3">
         {!configured && (
-          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            El asistente no está configurado. Obtén una clave gratuita de Groq en{' '}
-            <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="underline font-semibold">console.groq.com/keys</a>,
-            pégala en el archivo <code className="font-mono">.env</code> (<code className="font-mono">VITE_GROQ_API_KEY</code>) y reinicia el servidor de desarrollo.
+          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+            <p className="font-semibold">El asistente no está configurado.</p>
+            <p>
+              Obtén una clave gratuita de Groq en{' '}
+              <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="underline font-semibold">console.groq.com/keys</a>.
+            </p>
+            <p><strong>En local:</strong> pégala en el archivo <code className="font-mono">.env</code> como <code className="font-mono">VITE_GROQ_API_KEY=tu_clave</code> y reinicia el servidor.</p>
+            <p><strong>En Vercel:</strong> ve a <em>Project → Settings → Environment Variables</em>, añade <code className="font-mono">VITE_GROQ_API_KEY</code> con tu clave y haz un nuevo deploy.</p>
           </div>
         )}
         {messages.map((m, idx) => (

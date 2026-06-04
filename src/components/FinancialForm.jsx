@@ -44,7 +44,7 @@ export default function FinancialForm({ data, onChange, isContratoMarco, inflati
               onChange={(e) => onChange('projectionYears', parseInt(e.target.value))}
               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-900 focus:border-amaq-400 focus:bg-slate-50 focus:shadow-glow outline-none transition-all duration-300 shadow-inner appearance-none cursor-pointer"
             >
-              {[3, 4, 5, 6, 7, 8, 10].map(year => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(year => (
                 <option key={year} value={year} className="bg-slate-50 text-slate-900">{year} años</option>
               ))}
             </select>

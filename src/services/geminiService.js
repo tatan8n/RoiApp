@@ -194,7 +194,7 @@ const COMMON_CLIENT = [
 
 const FINANCIAL = [
   ['financial.discountRate', 'Tasa de descuento anual como FRACCIÓN decimal (ej: 0.12 para 12%)'],
-  ['financial.projectionYears', 'Horizonte en años (uno de: 3, 5, 7, 10)']
+  ['financial.projectionYears', 'Horizonte en años (número entero del 1 al 10)']
 ]
 
 const OPERATIONAL = [
