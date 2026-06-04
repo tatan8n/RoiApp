@@ -106,11 +106,11 @@ export default function FormWizard({
     }
   }
 
-  const handleExportHTML = () => {
+  const handleExportHTML = async () => {
     const companyName = formData.client?.companyName || 'cliente'
     const date = new Date().toISOString().slice(0, 10)
     const filename = `reporte_roi_${companyName.replace(/\s+/g, '_')}_${date}.html`
-    downloadHTML(formData, results, filename)
+    await downloadHTML(formData, results, filename)
   }
 
   const handleNext = () => {

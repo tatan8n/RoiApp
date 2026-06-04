@@ -1,6 +1,6 @@
 import { EQUIPMENT_MODELS, SERVICE_TYPES } from './constants.js'
 
-export function generateHTML(formData, results) {
+export function generateHTML(formData, results, logoDataUrl = '') {
   const isProduct = formData.calculationType === 'product'
   const isService = formData.calculationType === 'service'
   const isContratoMarco = isService && formData.serviceType === 'contrato_marco'
@@ -146,7 +146,7 @@ export function generateHTML(formData, results) {
 <title>Reporte ROI — ${esc(formData.client?.companyName || 'Cliente')} | A-MAQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
@@ -178,10 +178,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .hdr-geo svg{width:100%;height:100%}
 .hdr-top{position:relative;z-index:1;display:grid;grid-template-columns:1fr auto;gap:24px;padding:36px 40px 24px;align-items:start}
 .hdr-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.hdr-mark{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:22px}
+.hdr-mark{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800}
+.hdr-logo{height:44px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:.95}
 .hdr-mname{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
 .hdr-mtag{font-size:11px;opacity:.55;letter-spacing:.04em}
-.hdr-co{font-family:'DM Serif Display',serif;font-size:34px;line-height:1.15;margin-bottom:6px}
+.hdr-co{font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;line-height:1.15;margin-bottom:6px;letter-spacing:-.3px}
 .hdr-sub{font-size:14px;opacity:.75;font-weight:400}
 .hdr-right{text-align:right;min-width:156px}
 .hdr-dl{font-size:10px;opacity:.5;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;margin-top:12px}
@@ -201,7 +202,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .kcard:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
 .kico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
 .kico svg{width:15px;height:15px;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;fill:none}
-.kval{font-family:'DM Serif Display',serif;font-size:26px;line-height:1.1;color:var(--kc,var(--tx))}
+.kval{font-family:'DM Sans',sans-serif;font-size:26px;font-weight:800;line-height:1.1;color:var(--kc,var(--tx));letter-spacing:-.5px}
 .kval.na{font-size:20px;color:var(--txm)}
 .klbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--txm);margin-top:3px}
 .ksub{font-size:11px;color:var(--txm);margin-top:2px}
@@ -228,7 +229,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .si{padding:20px 24px;position:relative}
 .si+.si::before{content:'';position:absolute;left:0;top:18%;bottom:18%;width:1px;background:var(--bd)}
 .si-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--txm);margin-bottom:6px}
-.si-val{font-family:'DM Serif Display',serif;font-size:22px;line-height:1.1}
+.si-val{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.3px}
 .si-sub{font-size:11px;color:var(--txm);margin-top:4px}
 
 /* ── CHARTS ── */
@@ -283,7 +284,7 @@ tr:hover td{background:var(--n0)}
 /* ── FOOTER ── */
 .ftr{margin-top:32px;padding:22px 0 0;border-top:2px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:16px}
 .ftr-l{display:flex;align-items:center;gap:12px}
-.ftr-mark{width:36px;height:36px;background:var(--n8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'DM Serif Display',serif;font-size:18px}
+.ftr-mark{width:36px;height:36px;background:var(--n8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'DM Sans',sans-serif;font-size:18px}
 .ftr-co{font-size:13px;font-weight:700;color:var(--n8)}
 .ftr-sub{font-size:11px;color:var(--txm)}
 .ftr-r{text-align:right;font-size:11px;color:var(--txm);line-height:1.8}
@@ -340,7 +341,10 @@ tr:hover td{background:var(--n0)}
     <div class="hdr-top">
       <div>
         <div class="hdr-brand">
-          <div class="hdr-mark">A</div>
+          ${logoDataUrl
+            ? `<img src="${logoDataUrl}" alt="A-MAQ" class="hdr-logo">`
+            : '<div class="hdr-mark">A</div>'
+          }
           <div>
             <div class="hdr-mname">A-MAQ</div>
             <div class="hdr-mtag">Mantenimiento Industrial Predictivo</div>
@@ -695,9 +699,27 @@ function toggleI(btn){
 </html>`
 }
 
-export function downloadHTML(formData, results, filename = 'reporte_roi.html') {
+async function loadLogoAsBase64() {
   try {
-    const html = generateHTML(formData, results)
+    const { default: logoUrl } = await import('../assets/logo-amaq-white.png')
+    const response = await fetch(logoUrl)
+    if (!response.ok) return ''
+    const blob = await response.blob()
+    return await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result || '')
+      reader.onerror = () => resolve('')
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return ''
+  }
+}
+
+export async function downloadHTML(formData, results, filename = 'reporte_roi.html') {
+  try {
+    const logoDataUrl = await loadLogoAsBase64()
+    const html = generateHTML(formData, results, logoDataUrl)
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
