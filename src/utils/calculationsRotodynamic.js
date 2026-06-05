@@ -1,5 +1,6 @@
 import { ROTODYNAMIC_BENCHMARKS, ROTODYNAMIC_FACTOR_WEIGHTS, TURBINE_TYPES, CONTRIBUTION_MARGIN_PER_KWH, CAPACITY_FACTORS, USEFUL_LIFE_YEARS, MAX_REASONABLE_ROI } from './constants.js'
 import { validateResults, validateInputData } from './calculationValidator.js'
+import { applyRotodynamicBenchmarks, BENCHMARK_CERTAINTY_FACTOR } from './industryBenchmarks.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -94,6 +95,8 @@ export function calculateRotodynamicFactors(data) {
     }
   }
 
+  const _ba = data._benchmarkApplied || {}
+
   const hasActualFailureData = criticalFailures !== null && avgStopDuration !== null && costPerHourStop !== null
   const hasCapacityData = nominalCapacity !== null
   const isZeroHoursTurbine = (data.yearsOfOperation === 0 || data.yearsOfOperation === null) &&
@@ -123,12 +126,15 @@ export function calculateRotodynamicFactors(data) {
       factors.f1.baseValue = estimatedAnnualLoss
       factors.f1.savings = estimatedAnnualLoss * effectiveReduction
       factors.f1.answered = true
+      // f1 from theoretical estimation is treated as benchmark-quality data
+      factors.f1.answeredByBenchmark = true
     }
   } else if (hasActualFailureData && criticalFailures > 0 && avgStopDuration > 0 && costPerHourStop > 0) {
     const hoursStopYear = (criticalFailures / 2) * avgStopDuration
     factors.f1.baseValue = hoursStopYear * costPerHourStop
     factors.f1.savings = factors.f1.baseValue * reductionFailures
     factors.f1.answered = true
+    if (_ba.criticalFailures || _ba.avgStopDuration) factors.f1.answeredByBenchmark = true
   }
 
   if (nominalCapacity !== null && heatRateDesign !== null && heatRateActual !== null && fuelCost !== null) {
@@ -147,6 +153,7 @@ export function calculateRotodynamicFactors(data) {
     factors.f3.baseValue = reactiveManHours * internalLaborCost
     factors.f3.savings = factors.f3.baseValue * optimizationHH
     factors.f3.answered = true
+    if (_ba.reactiveManHours) factors.f3.answeredByBenchmark = true
   }
 
   if (sparePartsDelay !== null && costPerHourStop !== null && criticalFailures !== null && avgStopDuration !== null) {
@@ -155,6 +162,7 @@ export function calculateRotodynamicFactors(data) {
       factors.f4.baseValue = delayCost
       factors.f4.savings = delayCost * reductionDelays
       factors.f4.answered = true
+      if (_ba.criticalFailures || _ba.avgStopDuration || _ba.sparePartsDelay) factors.f4.answeredByBenchmark = true
     }
   }
 
@@ -186,6 +194,8 @@ export function calculateRotodynamicFactors(data) {
     factors.f6.baseValue = safetySavingsYear
     factors.f6.savings = safetySavingsYear * effectiveRiskReduction
     factors.f6.answered = true
+    // f6 derived from capacity estimate is treated as benchmark quality
+    factors.f6.answeredByBenchmark = true
   }
 
   return factors
@@ -265,18 +275,40 @@ export function getRotodynamicDominantFactors(factors, totalSavings) {
 
 export function calculateRotodynamicCertainty(factors) {
   const weights = ROTODYNAMIC_FACTOR_WEIGHTS
-
   let totalWeight = 0
   let answeredWeight = 0
 
   Object.keys(weights).forEach(key => {
-    totalWeight += weights[key]
+    const w = weights[key]
+    totalWeight += w
     if (factors[key]?.answered) {
-      answeredWeight += weights[key]
+      answeredWeight += factors[key].answeredByBenchmark ? w * BENCHMARK_CERTAINTY_FACTOR : w
     }
   })
 
   return Math.round((answeredWeight / totalWeight) * 100)
+}
+
+export function calculateRotodynamicUserCertainty(factors) {
+  const weights = ROTODYNAMIC_FACTOR_WEIGHTS
+  let totalWeight = 0
+  let userWeight = 0
+
+  Object.keys(weights).forEach(key => {
+    const w = weights[key]
+    totalWeight += w
+    if (factors[key]?.answered && !factors[key]?.answeredByBenchmark) {
+      userWeight += w
+    }
+  })
+
+  return Math.round((userWeight / totalWeight) * 100)
+}
+
+export function getRotodynamicBenchmarkFields(factors) {
+  return Object.values(factors)
+    .filter(f => f.answered && f.answeredByBenchmark)
+    .map(f => f.name)
 }
 
 export function getRotodynamicCertaintyLevel(certainty) {
@@ -314,6 +346,11 @@ export function generateRotodynamicProjection(annualSavings, investment, years) 
 }
 
 export function calculateAllRotodynamic(data) {
+  // Apply turbine-type benchmarks for any null operational fields
+  const { data: filledData, benchmarkApplied } = applyRotodynamicBenchmarks(data)
+  filledData._benchmarkApplied = benchmarkApplied
+  data = filledData
+
   const inputValidation = validateInputData({ ...data }, 'rotodinamico')
 
   const factors = calculateRotodynamicFactors(data)
@@ -331,8 +368,10 @@ export function calculateAllRotodynamic(data) {
   const tir = calculateRotodynamicTIR(totalSavings, investment, projectionYears)
 
   const certainty = calculateRotodynamicCertainty(factors)
+  const userCertainty = calculateRotodynamicUserCertainty(factors)
   const certaintyInfo = getRotodynamicCertaintyLevel(certainty)
   const missingFields = getRotodynamicMissingFields(factors)
+  const benchmarkFactors = getRotodynamicBenchmarkFields(factors)
   const dominantFactors = getRotodynamicDominantFactors(factors, totalSavings)
   const roiWarning = roi !== null && roi > ROI_WARNING_THRESHOLD
   const roiSeverity = roi !== null && roi > ROI_DANGER_THRESHOLD ? 'danger' : (roi !== null && roi > ROI_WARNING_THRESHOLD ? 'warning' : null)
@@ -413,8 +452,11 @@ export function calculateAllRotodynamic(data) {
     van,
     tir,
     certainty,
+    userCertainty,
     certaintyInfo,
     missingFields,
+    benchmarkFactors,
+    benchmarkApplied,
     dominantFactors,
     roiWarning,
     roiSeverity,
@@ -424,9 +466,10 @@ export function calculateAllRotodynamic(data) {
     monthlySavings: totalSavings / 12,
     manHourCost: 0,
     warnings,
-    projectionYears
+    projectionYears,
+    usedBenchmarks: Object.keys(benchmarkApplied).length > 0
   }
-  
+
   return validateResults(rawResults, data)
 }
 

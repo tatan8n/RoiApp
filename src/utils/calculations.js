@@ -1,5 +1,6 @@
 import { DEFAULT_BENCHMARKS, MAX_REASONABLE_ROI } from './constants.js'
 import { validateResults, validateInputData } from './calculationValidator.js'
+import { applyOperationalBenchmarks, BENCHMARK_CERTAINTY_FACTOR } from './industryBenchmarks.js'
 
 const PRESTACIONAL_FACTOR = 1.75
 const MONTHLY_WORKING_HOURS = 240
@@ -153,29 +154,35 @@ export function calculateFactors(data) {
     }
   }
 
+  const _ba = convertedData._benchmarkApplied || {}
+
   if (unplannedFailures !== null && unplannedFailures > 0 && avgStopDuration !== null && avgStopDuration > 0 && costPerHourStop !== null && costPerHourStop > 0) {
     const hoursStopYear = unplannedFailures * avgStopDuration
     factors.f1.baseValue = hoursStopYear * costPerHourStop
     factors.f1.savings = factors.f1.baseValue * reductionFailures
     factors.f1.answered = true
+    if (_ba.unplannedFailures || _ba.avgStopDuration || _ba.costPerHourStop) factors.f1.answeredByBenchmark = true
   }
 
   if (correctiveExternalCost !== null && correctiveExternalCost > 0 && correctiveExternalCount !== null && correctiveExternalCount > 0) {
     factors.f2.baseValue = correctiveExternalCost * correctiveExternalCount
     factors.f2.savings = factors.f2.baseValue * reductionCorrective
     factors.f2.answered = true
+    if (_ba.correctiveExternalCost || _ba.correctiveExternalCount) factors.f2.answeredByBenchmark = true
   }
 
   if (reactiveManHours !== null && reactiveManHours > 0 && manHourCost !== null && manHourCost > 0) {
     factors.f3.baseValue = reactiveManHours * 12 * manHourCost
     factors.f3.savings = factors.f3.baseValue * optimizationHH
     factors.f3.answered = true
+    if (_ba.reactiveManHours || _ba.technicianMonthlySalary) factors.f3.answeredByBenchmark = true
   }
 
   if (sparePartsInventoryCost !== null && sparePartsInventoryCost > 0) {
     factors.f4.baseValue = sparePartsInventoryCost
     factors.f4.savings = sparePartsInventoryCost * reductionDelays
     factors.f4.answered = true
+    if (_ba.sparePartsInventoryCost) factors.f4.answeredByBenchmark = true
   }
 
   if (scheduledStopHours !== null && scheduledStopHours > 0 && scheduledStopCost !== null && scheduledStopCost > 0) {
@@ -187,6 +194,7 @@ export function calculateFactors(data) {
     }
     factors.f5.savings = f5Savings
     factors.f5.answered = true
+    if (_ba.scheduledStopHours || _ba.scheduledStopCost) factors.f5.answeredByBenchmark = true
   }
 
   if (criticalAssets !== null && criticalAssets > 0 && avgCriticalAssetValue !== null && avgCriticalAssetValue > 0) {
@@ -195,12 +203,14 @@ export function calculateFactors(data) {
     factors.f6.baseValue = annualDeferral
     factors.f6.savings = annualDeferral * extensionLife
     factors.f6.answered = true
+    if (_ba.criticalAssets || _ba.avgCriticalAssetValue) factors.f6.answeredByBenchmark = true
   }
 
   if (totalAssets !== null && totalAssets > 0 && annualEnergyCost !== null && annualEnergyCost > 0) {
     factors.f7.baseValue = annualEnergyCost
     factors.f7.savings = annualEnergyCost * energySavings
     factors.f7.answered = true
+    if (_ba.totalAssets || _ba.annualEnergyCost) factors.f7.answeredByBenchmark = true
   }
 
   // f8 (Seguridad): CAMBIO DE MODELADO — antes se activaba con solo tener facturación,
@@ -216,22 +226,26 @@ export function calculateFactors(data) {
     factors.f8.baseValue = safetySavingsYear
     factors.f8.savings = safetySavingsYear * riskReduction
     factors.f8.answered = true
+    if (_ba.monthlyBilling || _ba.unplannedFailures || _ba.correctiveExternalCount) factors.f8.answeredByBenchmark = true
   }
 
   if (preventiveMaintenanceCost !== null && preventiveMaintenanceCost > 0 && unnecessaryPreventivePercentage !== null && unnecessaryPreventivePercentage > 0) {
     factors.f9.baseValue = preventiveMaintenanceCost
     factors.f9.savings = preventiveMaintenanceCost * (unnecessaryPreventivePercentage / 100) * reductionPreventive
     factors.f9.answered = true
+    if (_ba.preventiveMaintenanceCost || _ba.unnecessaryPreventivePercentage) factors.f9.answeredByBenchmark = true
   } else if (preventiveMaintenanceCost !== null && preventiveMaintenanceCost > 0) {
     factors.f9.baseValue = preventiveMaintenanceCost
     factors.f9.savings = preventiveMaintenanceCost * 0.35 * reductionPreventive
     factors.f9.answered = true
+    if (_ba.preventiveMaintenanceCost) factors.f9.answeredByBenchmark = true
   }
 
   if (inducedFailureCost !== null && inducedFailureCost > 0) {
     factors.f10.baseValue = inducedFailureCost
     factors.f10.savings = inducedFailureCost * eliminationInducedFailures
     factors.f10.answered = true
+    if (_ba.inducedFailureCost) factors.f10.answeredByBenchmark = true
   }
 
   return { factors, _meta: { manHourCost } }
@@ -351,31 +365,39 @@ export function getDominantFactors(factors, totalSavings) {
     }))
 }
 
-export function calculateCertainty(factors) {
-  const weights = {
-    f1: 12,
-    f2: 9,
-    f3: 7,
-    f4: 6,
-    f5: 5,
-    f6: 5,
-    f7: 4,
-    f8: 4,
-    f9: 8,
-    f10: 10
-  }
+const CERTAINTY_WEIGHTS = {
+  f1: 12, f2: 9, f3: 7, f4: 6, f5: 5,
+  f6: 5,  f7: 4, f8: 4, f9: 8, f10: 10
+}
 
+export function calculateCertainty(factors) {
   let totalWeight = 0
   let answeredWeight = 0
 
-  Object.keys(weights).forEach(key => {
-    totalWeight += weights[key]
+  Object.keys(CERTAINTY_WEIGHTS).forEach(key => {
+    const w = CERTAINTY_WEIGHTS[key]
+    totalWeight += w
     if (factors[key]?.answered) {
-      answeredWeight += weights[key]
+      answeredWeight += factors[key].answeredByBenchmark ? w * BENCHMARK_CERTAINTY_FACTOR : w
     }
   })
 
   return Math.round((answeredWeight / totalWeight) * 100)
+}
+
+export function calculateUserCertainty(factors) {
+  let totalWeight = 0
+  let userWeight = 0
+
+  Object.keys(CERTAINTY_WEIGHTS).forEach(key => {
+    const w = CERTAINTY_WEIGHTS[key]
+    totalWeight += w
+    if (factors[key]?.answered && !factors[key]?.answeredByBenchmark) {
+      userWeight += w
+    }
+  })
+
+  return Math.round((userWeight / totalWeight) * 100)
 }
 
 export function getCertaintyLevel(certainty) {
@@ -392,6 +414,12 @@ export function getMissingFields(factors) {
     }
   })
   return missing
+}
+
+export function getBenchmarkFactors(factors) {
+  return Object.values(factors)
+    .filter(f => f.answered && f.answeredByBenchmark)
+    .map(f => f.name)
 }
 
 export function generateProjection(annualSavings, investment, years) {
@@ -413,14 +441,19 @@ export function generateProjection(annualSavings, investment, years) {
 }
 
 export function calculateAll(data) {
-  const inputValidation = validateInputData({ ...data }, 'product')
+  // Apply industry benchmarks for any null operational fields before computing
+  const sector = data.sector || null
+  const { data: filledData, benchmarkApplied } = applyOperationalBenchmarks(data, sector)
+  filledData._benchmarkApplied = benchmarkApplied
 
-  const { factors, _meta } = calculateFactors(data)
+  const inputValidation = validateInputData({ ...filledData }, 'product')
+
+  const { factors, _meta } = calculateFactors(filledData)
   const totalSavings = calculateTotalSavings(factors)
-  const investment = data.investment || 0
+  const investment = filledData.investment || 0
 
-  const discountRate = data.discountRate || 0.12
-  const projectionYears = data.projectionYears || 5
+  const discountRate = filledData.discountRate || 0.12
+  const projectionYears = filledData.projectionYears || 5
 
   let roi = calculateROI(investment, totalSavings, projectionYears)
   if (roi !== null && roi > MAX_REASONABLE_ROI) roi = MAX_REASONABLE_ROI
@@ -433,16 +466,18 @@ export function calculateAll(data) {
   const manHourCost = _meta?.manHourCost || 0
 
   const certainty = calculateCertainty(factors)
+  const userCertainty = calculateUserCertainty(factors)
   const certaintyInfo = getCertaintyLevel(certainty)
   const missingFields = getMissingFields(factors)
+  const benchmarkFactors = getBenchmarkFactors(factors)
   const dominantFactors = getDominantFactors(factors, totalSavings)
   const roiWarning = roi !== null && roi > ROI_WARNING_THRESHOLD
   const roiSeverity = roi !== null && roi > ROI_DANGER_THRESHOLD ? 'danger' : (roi !== null && roi > ROI_WARNING_THRESHOLD ? 'warning' : null)
 
   let savingsOverCap = false
   let savingsCapPct = null
-  const monthlyBillingFull = (data.monthlyBilling && data.monthlyBilling > 0)
-    ? data.monthlyBilling * 1_000_000
+  const monthlyBillingFull = (filledData.monthlyBilling && filledData.monthlyBilling > 0)
+    ? filledData.monthlyBilling * 1_000_000
     : 0
   if (monthlyBillingFull > 0) {
     const annualBilling = monthlyBillingFull * 12
@@ -465,8 +500,11 @@ export function calculateAll(data) {
     van,
     tir,
     certainty,
+    userCertainty,
     certaintyInfo,
     missingFields,
+    benchmarkFactors,
+    benchmarkApplied,
     dominantFactors,
     roiWarning,
     roiSeverity,
@@ -476,13 +514,19 @@ export function calculateAll(data) {
     monthlySavings: totalSavings / 12,
     manHourCost,
     warnings: inputValidation.warnings,
-    projectionYears
+    projectionYears,
+    usedBenchmarks: Object.keys(benchmarkApplied).length > 0
   }
 
-  return validateResults(rawResults, data)
+  return validateResults(rawResults, filledData)
 }
 
 export function calculateAllContratoMarco(data) {
+  const sector = data.sector || null
+  const { data: filledData, benchmarkApplied } = applyOperationalBenchmarks(data, sector)
+  filledData._benchmarkApplied = benchmarkApplied
+  data = filledData
+
   const inputValidation = validateInputData({ ...data }, 'contrato_marco')
 
   const { factors, _meta } = calculateFactors(data)
@@ -558,8 +602,10 @@ export function calculateAllContratoMarco(data) {
   }
 
   const certainty = calculateCertainty(factors)
+  const userCertainty = calculateUserCertainty(factors)
   const certaintyInfo = getCertaintyLevel(certainty)
   const missingFields = getMissingFields(factors)
+  const benchmarkFactors = getBenchmarkFactors(factors)
   const dominantFactors = getDominantFactors(factors, totalSavings)
 
   let savingsOverCap = false
@@ -591,8 +637,11 @@ export function calculateAllContratoMarco(data) {
     van,
     tir,
     certainty,
+    userCertainty,
     certaintyInfo,
     missingFields,
+    benchmarkFactors,
+    benchmarkApplied,
     dominantFactors,
     roiWarning: roi > ROI_WARNING_THRESHOLD,
     roiSeverity: roi > ROI_DANGER_THRESHOLD ? 'danger' : roi > ROI_WARNING_THRESHOLD ? 'warning' : null,
@@ -603,7 +652,8 @@ export function calculateAllContratoMarco(data) {
     manHourCost,
     warnings: inputValidation.warnings,
     isContratoMarco: true,
-    projectionYears
+    projectionYears,
+    usedBenchmarks: Object.keys(benchmarkApplied).length > 0
   }
 
   return validateResults(rawResults, data)

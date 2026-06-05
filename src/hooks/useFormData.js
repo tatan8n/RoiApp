@@ -232,9 +232,11 @@ export function useFormData() {
   }, [formData.equipment, formData.rotodynamic.serviceValue, formData.contratoMarco, formData.calculationType, formData.currency, isContratoMarco])
 
   const getCompleteData = useCallback(() => {
+    const sector = formData.client.sector || null
     if (formData.calculationType === 'product') {
       return {
         investment: getInvestment(),
+        sector,
         ...formData.operational,
         benchmarks: formData.benchmarks,
         discountRate: formData.financial.discountRate,
@@ -247,6 +249,7 @@ export function useFormData() {
         : 0
       return {
         investment: annualContractValueFull,
+        sector,
         currency: formData.currency,
         ...formData.operational,
         benchmarks: formData.benchmarks,

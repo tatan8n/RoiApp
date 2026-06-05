@@ -147,7 +147,10 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
 
         <CertaintyMeter
           certainty={results.certainty}
+          userCertainty={results.userCertainty}
           missingFields={results.missingFields}
+          benchmarkFactors={results.benchmarkFactors || []}
+          benchmarkApplied={results.benchmarkApplied || {}}
           levelInfo={results.certaintyInfo}
         />
 

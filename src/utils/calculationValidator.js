@@ -79,8 +79,8 @@ export function validateResults(results, data) {
     results.roiWasCapped = true
   }
   
-  // Cap savings vs revenue
-  const annualRevenue = (data.monthlyBilling || 0) * 12
+  // Cap savings vs revenue. monthlyBilling is stored in MM COP → convert to full COP.
+  const annualRevenue = (data.monthlyBilling || 0) * 1_000_000 * 12
   if (annualRevenue > 0 && results.totalSavings > annualRevenue * MAX_SAVINGS_PCT_OF_REVENUE) {
     const cappedSavings = annualRevenue * MAX_SAVINGS_PCT_OF_REVENUE
     adjustments.push({ metric: 'totalSavings', original: results.totalSavings, capped: cappedSavings, reason: `Ahorro anual (${(results.totalSavings/annualRevenue*100).toFixed(0)}% de facturación) excede el 30% máximo razonable.` })
