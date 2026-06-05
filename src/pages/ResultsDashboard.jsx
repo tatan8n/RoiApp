@@ -283,7 +283,7 @@ export default function ResultsDashboard({ formData, results, onBack, onGoHome, 
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <BenefitsChart factors={results.factors} />
-          <TimelineChart projection={results.projection} investment={results.investment} />
+          <TimelineChart projection={results.projection} investment={results.investment} projectionYears={results.projectionYears} />
         </div>
 
         <div className="mt-6 bg-white rounded-xl shadow-md p-6">
